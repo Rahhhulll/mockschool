@@ -1,11 +1,18 @@
 const express = require('express');
+const connectDB = require('./config/db');
 
 const app = express();
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
+connectDB();
+
+app.use(express.json());
 
 app.get('/', (req, res) => {
-    res.send('MockSchool Backend is Running');
+    res.json({
+        message: 'MockSchool API is running'
+    });
 });
 
 app.listen(PORT, () => {
