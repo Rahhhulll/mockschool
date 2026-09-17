@@ -1,0 +1,119 @@
+const Feedback = require("../models/feedback.model");
+const Booking = require("../models/booking.model");
+
+// CREATE FEEDBACK
+const createFeedback = async (req, res) => {
+  try {
+    const {
+      bookingId,
+      technicalRating,
+      communicationRating,
+      confidenceRating,
+      strengths,
+      weaknesses,
+      overallFeedback,
+    } = req.body;
+
+    if (
+      !bookingId ||
+      technicalRating === undefined ||
+      communicationRating === undefined ||
+      confidenceRating === undefined
+    ) {
+      return res.status(400).json({
+        message:
+          "bookingId, technicalRating, communicationRating and confidenceRating are required",
+      });
+    }
+
+    // Find booking belonging to logged-in student
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      studentId: req.user.userId,
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found",
+      });
+    }
+
+    // Feedback only after interview is completed
+    if (booking.status !== "completed") {
+      return res.status(400).json({
+        message: "Feedback can be submitted only for completed booking",
+      });
+    }
+
+    // Check existing feedback
+    const existingFeedback = await Feedback.findOne({
+      bookingId,
+    });
+
+    if (existingFeedback) {
+      return res.status(409).json({
+        message: "Feedback already submitted",
+      });
+    }
+
+    const feedback = await Feedback.create({
+      bookingId,
+      studentId: req.user.userId,
+      mentorId: booking.mentorId,
+      technicalRating,
+      communicationRating,
+      confidenceRating,
+      strengths,
+      weaknesses,
+      overallFeedback,
+    });
+
+    res.status(201).json({
+      message: "Feedback submitted successfully",
+      feedback,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to submit feedback",
+      error: error.message,
+    });
+  }
+};
+
+// GET FEEDBACK BY BOOKING ID
+const getFeedbackByBooking = async (req, res) => {
+  try {
+    const feedback = await Feedback.findOne({
+      bookingId: req.params.bookingId,
+    })
+      .populate("studentId", "name email")
+      .populate({
+        path: "mentorId",
+        populate: {
+          path: "userId",
+          select: "name email",
+        },
+      });
+
+    if (!feedback) {
+      return res.status(404).json({
+        message: "Feedback not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Feedback fetched successfully",
+      feedback,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch feedback",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  createFeedback,
+  getFeedbackByBooking,
+}; 

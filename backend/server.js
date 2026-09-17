@@ -6,6 +6,7 @@ const userRoutes = require('./routes/user.routes');
 const mentorRoutes = require('./routes/mentor.routes');
 const slotRoutes = require('./routes/slot.routes');
 const bookingRoutes = require("./routes/booking.routes");
+const feedbackRoutes = require("./routes/feedback.routes");
 
 const app = express();
 
@@ -28,6 +29,8 @@ app.use('/api/mentors', mentorRoutes);
 app.use('/api/slots', slotRoutes);
 
 app.use("/api/bookings", bookingRoutes);
+
+app.use("/api/feedback", feedbackRoutes);
 
 // Root Route
 app.get('/', (req, res) => {
