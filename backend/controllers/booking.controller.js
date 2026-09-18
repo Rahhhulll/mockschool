@@ -198,9 +198,25 @@ const getMentorBookings = async (req, res) => {
 };
 
 // COMPLETE BOOKING
+// COMPLETE BOOKING
 const completeBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
+    // Find logged-in mentor
+    const mentor = await Mentor.findOne({
+      userId: req.user.userId,
+    });
+
+    if (!mentor) {
+      return res.status(404).json({
+        message: "Mentor profile not found",
+      });
+    }
+
+    // Find booking belonging to this mentor
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      mentorId: mentor._id,
+    });
 
     if (!booking) {
       return res.status(404).json({
@@ -234,7 +250,6 @@ const completeBooking = async (req, res) => {
     });
   }
 };
-
 module.exports = {
   createBooking,
   getMyBookings,
