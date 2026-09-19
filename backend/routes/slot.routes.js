@@ -3,6 +3,8 @@ const express = require("express");
 const {
   createSlot,
   getAvailableSlots,
+  getMySlots,
+  updateSlot,
 } = require("../controllers/slot.controller");
 
 const authMiddleware = require("../middleware/auth.middleware");
@@ -16,6 +18,22 @@ router.post(
   authMiddleware,
   authorizeRoles("mentor"),
   createSlot
+);
+
+// GET MY SLOTS - MENTOR ONLY
+router.get(
+  "/my-slots",
+  authMiddleware,
+  authorizeRoles("mentor"),
+  getMySlots
+);
+
+// UPDATE SLOT - MENTOR ONLY
+router.put(
+  "/:id",
+  authMiddleware,
+  authorizeRoles("mentor"),
+  updateSlot
 );
 
 // GET AVAILABLE SLOTS
