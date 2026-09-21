@@ -6,7 +6,6 @@ const createSlot = async (req, res) => {
   try {
     const { date, startTime, endTime } = req.body;
 
-    // Required fields
     if (!date || !startTime || !endTime) {
       return res.status(400).json({
         message: "Date, startTime and endTime are required",
@@ -24,7 +23,6 @@ const createSlot = async (req, res) => {
       });
     }
 
-    // Create slot
     const slot = await Slot.create({
       mentorId: mentor._id,
       date,
@@ -47,7 +45,6 @@ const createSlot = async (req, res) => {
 // GET MY SLOTS - MENTOR ONLY
 const getMySlots = async (req, res) => {
   try {
-    // Find logged-in mentor
     const mentor = await Mentor.findOne({
       userId: req.user.userId,
     });
@@ -58,7 +55,6 @@ const getMySlots = async (req, res) => {
       });
     }
 
-    // Get only this mentor's slots
     const slots = await Slot.find({
       mentorId: mentor._id,
     }).sort({
@@ -101,7 +97,7 @@ const updateSlot = async (req, res) => {
       });
     }
 
-    // Update only if slot belongs to logged-in mentor
+    // Update only mentor's own unbooked slot
     const slot = await Slot.findOneAndUpdate(
       {
         _id: req.params.id,
@@ -136,6 +132,45 @@ const updateSlot = async (req, res) => {
     });
   }
 };
+
+// DELETE MY SLOT - MENTOR ONLY
+const deleteSlot = async (req, res) => {
+  try {
+    // Find logged-in mentor
+    const mentor = await Mentor.findOne({
+      userId: req.user.userId,
+    });
+
+    if (!mentor) {
+      return res.status(404).json({
+        message: "Mentor profile not found",
+      });
+    }
+
+    // Delete only mentor's own unbooked slot
+    const slot = await Slot.findOneAndDelete({
+      _id: req.params.id,
+      mentorId: mentor._id,
+      isBooked: false,
+    });
+
+    if (!slot) {
+      return res.status(404).json({
+        message: "Slot not found or slot is already booked",
+      });
+    }
+
+    res.status(200).json({
+      message: "Slot deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to delete slot",
+      error: error.message,
+    });
+  }
+};
+
 // GET AVAILABLE SLOTS
 const getAvailableSlots = async (req, res) => {
   try {
@@ -149,7 +184,10 @@ const getAvailableSlots = async (req, res) => {
           select: "name email",
         },
       })
-      .sort({ date: 1, startTime: 1 });
+      .sort({
+        date: 1,
+        startTime: 1,
+      });
 
     res.status(200).json({
       message: "Available slots fetched successfully",
@@ -166,7 +204,8 @@ const getAvailableSlots = async (req, res) => {
 
 module.exports = {
   createSlot,
-    getMySlots, 
+  getMySlots,
   getAvailableSlots,
-   updateSlot,
+  updateSlot,
+  deleteSlot,
 };

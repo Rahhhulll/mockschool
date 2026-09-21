@@ -13,19 +13,23 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Find available slot
-    const slot = await Slot.findById(slotId);
+    // Atomically book the slot
+    const slot = await Slot.findOneAndUpdate(
+      {
+        _id: slotId,
+        isBooked: false,
+      },
+      {
+        isBooked: true,
+      },
+      {
+        new: true,
+      }
+    );
 
     if (!slot) {
-      return res.status(404).json({
-        message: "Slot not found",
-      });
-    }
-
-    // Check if slot is already booked
-    if (slot.isBooked) {
       return res.status(409).json({
-        message: "Slot is already booked",
+        message: "Slot is already booked or not available",
       });
     }
 
@@ -34,11 +38,9 @@ const createBooking = async (req, res) => {
       studentId: req.user.userId,
       mentorId: slot.mentorId,
       slotId: slot._id,
+      amount: 99,
+      paymentStatus: "pending",
     });
-
-    // Mark slot as booked
-    slot.isBooked = true;
-    await slot.save();
 
     res.status(201).json({
       message: "Booking created successfully",
@@ -51,6 +53,7 @@ const createBooking = async (req, res) => {
     });
   }
 };
+
 // GET MY BOOKINGS
 const getMyBookings = async (req, res) => {
   try {
@@ -148,7 +151,9 @@ const cancelBooking = async (req, res) => {
     // Make slot available again
     await Slot.findByIdAndUpdate(
       booking.slotId,
-      { isBooked: false }
+      {
+        isBooked: false,
+      }
     );
 
     res.status(200).json({
@@ -157,7 +162,7 @@ const cancelBooking = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: "Failed to cancel booking",
+      message: "Failed to fetch/cancel booking",
       error: error.message,
     });
   }
@@ -182,7 +187,9 @@ const getMentorBookings = async (req, res) => {
     })
       .populate("studentId", "name email")
       .populate("slotId")
-      .sort({ createdAt: -1 });
+      .sort({
+        createdAt: -1,
+      });
 
     res.status(200).json({
       message: "Mentor bookings fetched successfully",
@@ -197,7 +204,6 @@ const getMentorBookings = async (req, res) => {
   }
 };
 
-// COMPLETE BOOKING
 // COMPLETE BOOKING
 const completeBooking = async (req, res) => {
   try {
@@ -237,6 +243,7 @@ const completeBooking = async (req, res) => {
     }
 
     booking.status = "completed";
+
     await booking.save();
 
     res.status(200).json({
@@ -250,6 +257,7 @@ const completeBooking = async (req, res) => {
     });
   }
 };
+
 module.exports = {
   createBooking,
   getMyBookings,

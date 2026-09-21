@@ -80,9 +80,41 @@ const createFeedback = async (req, res) => {
   }
 };
 
+
 // GET FEEDBACK BY BOOKING ID
 const getFeedbackByBooking = async (req, res) => {
   try {
+    const booking = await Booking.findById(req.params.bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found",
+      });
+    }
+
+    // Student can access only their own booking feedback
+    if (
+      req.user.role === "student" &&
+      booking.studentId.toString() !== req.user.userId.toString()
+    ) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
+    // Mentor can access only their own booking feedback
+    if (req.user.role === "mentor") {
+      const mentor = await require("../models/mentor.model").findOne({
+        userId: req.user.userId,
+      });
+
+      if (!mentor || booking.mentorId.toString() !== mentor._id.toString()) {
+        return res.status(403).json({
+          message: "Access denied",
+        });
+      }
+    }
+
     const feedback = await Feedback.findOne({
       bookingId: req.params.bookingId,
     })

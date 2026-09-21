@@ -5,6 +5,7 @@ const {
   getAvailableSlots,
   getMySlots,
   updateSlot,
+   deleteSlot,
 } = require("../controllers/slot.controller");
 
 const authMiddleware = require("../middleware/auth.middleware");
@@ -17,7 +18,8 @@ router.post(
   "/",
   authMiddleware,
   authorizeRoles("mentor"),
-  createSlot
+  createSlot,
+   deleteSlot
 );
 
 // GET MY SLOTS - MENTOR ONLY
