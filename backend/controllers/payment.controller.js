@@ -1,4 +1,5 @@
 const Booking = require("../models/booking.model");
+const { isValidObjectId } = require("../utils/validation");
 
 // CREATE PAYMENT ORDER
 const createPaymentOrder = async (req, res) => {
@@ -13,6 +14,12 @@ const createPaymentOrder = async (req, res) => {
 
     // Remove accidental quotes from bookingId
     const cleanBookingId = String(bookingId).replace(/"/g, "");
+
+    if (!isValidObjectId(cleanBookingId)) {
+      return res.status(400).json({
+        message: "Invalid booking ID",
+      });
+    }
 
     // Find student's own booking
     const booking = await Booking.findOne({
@@ -54,7 +61,6 @@ const createPaymentOrder = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to create payment order",
-      error: error.message,
     });
   }
 };
@@ -72,6 +78,12 @@ const confirmDummyPayment = async (req, res) => {
 
     // Remove accidental quotes from bookingId
     const cleanBookingId = String(bookingId).replace(/"/g, "");
+
+    if (!isValidObjectId(cleanBookingId)) {
+      return res.status(400).json({
+        message: "Invalid booking ID",
+      });
+    }
 
     // Find student's own booking
     const booking = await Booking.findOne({
@@ -114,7 +126,6 @@ const confirmDummyPayment = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to confirm payment",
-      error: error.message,
     });
   }
 };

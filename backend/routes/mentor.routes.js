@@ -14,7 +14,12 @@ const authorizeRoles = require("../middleware/role.middleware");
 const router = express.Router();
 
 // CREATE MENTOR PROFILE
-router.post("/", createMentor);
+router.post(
+  "/",
+  authMiddleware,
+  authorizeRoles("mentor"),
+  createMentor
+);
 
 // GET ALL MENTORS
 router.get("/", getAllMentors);
@@ -23,7 +28,12 @@ router.get("/", getAllMentors);
 router.get("/:id", getMentorById);
 
 // UPDATE MENTOR PROFILE
-router.put("/:id", updateMentor);
+router.put(
+  "/:id",
+  authMiddleware,
+  authorizeRoles("mentor"),
+  updateMentor
+);
 
 // VERIFY / UNVERIFY MENTOR - ADMIN ONLY
 router.patch(

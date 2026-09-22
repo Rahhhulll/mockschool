@@ -8,6 +8,9 @@ const slotRoutes = require("./routes/slot.routes");
 const bookingRoutes = require("./routes/booking.routes");
 const feedbackRoutes = require("./routes/feedback.routes");
 const paymentRoutes = require("./routes/payment.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
+const adminRoutes = require("./routes/admin.routes");
+const errorMiddleware = require("./middleware/error.middleware");
 
 const app = express();
 
@@ -40,12 +43,20 @@ app.use("/api/feedback", feedbackRoutes);
 // Payment Routes
 app.use("/api/payments", paymentRoutes);
 
+// Dashboard Routes
+app.use("/api/dashboard", dashboardRoutes);
+
+// Admin Routes
+app.use("/api/admin", adminRoutes);
+
 // Root Route
 app.get("/", (req, res) => {
   res.status(200).json({
     message: "MockSchool API is running",
   });
 });
+
+app.use(errorMiddleware);
 
 // Start Server
 app.listen(PORT, () => {

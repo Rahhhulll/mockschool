@@ -1,5 +1,6 @@
 const Feedback = require("../models/feedback.model");
 const Booking = require("../models/booking.model");
+const { isValidObjectId } = require("../utils/validation");
 
 // CREATE FEEDBACK
 const createFeedback = async (req, res) => {
@@ -23,6 +24,20 @@ const createFeedback = async (req, res) => {
       return res.status(400).json({
         message:
           "bookingId, technicalRating, communicationRating and confidenceRating are required",
+      });
+    }
+
+    if (!isValidObjectId(bookingId)) {
+      return res.status(400).json({
+        message: "Invalid booking ID",
+      });
+    }
+
+    if (![technicalRating, communicationRating, confidenceRating].every(
+      (rating) => typeof rating === "number" && Number.isFinite(rating) && rating >= 1 && rating <= 5
+    )) {
+      return res.status(400).json({
+        message: "Ratings must be numbers between 1 and 5",
       });
     }
 
@@ -73,9 +88,14 @@ const createFeedback = async (req, res) => {
       feedback,
     });
   } catch (error) {
+    if (error?.code === 11000 && error?.keyPattern?.bookingId) {
+      return res.status(409).json({
+        message: "Feedback already submitted",
+      });
+    }
+
     res.status(500).json({
       message: "Failed to submit feedback",
-      error: error.message,
     });
   }
 };
@@ -84,6 +104,12 @@ const createFeedback = async (req, res) => {
 // GET FEEDBACK BY BOOKING ID
 const getFeedbackByBooking = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.bookingId)) {
+      return res.status(400).json({
+        message: "Invalid booking ID",
+      });
+    }
+
     const booking = await Booking.findById(req.params.bookingId);
 
     if (!booking) {
@@ -140,7 +166,6 @@ const getFeedbackByBooking = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch feedback",
-      error: error.message,
     });
   }
 };

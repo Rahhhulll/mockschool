@@ -1,6 +1,7 @@
 const Booking = require("../models/booking.model");
 const Slot = require("../models/slot.model");
 const Mentor = require("../models/mentor.model");
+const { isValidObjectId } = require("../utils/validation");
 
 // CREATE BOOKING
 const createBooking = async (req, res) => {
@@ -10,6 +11,12 @@ const createBooking = async (req, res) => {
     if (!slotId) {
       return res.status(400).json({
         message: "slotId is required",
+      });
+    }
+
+    if (!isValidObjectId(slotId)) {
+      return res.status(400).json({
+        message: "Invalid slot ID",
       });
     }
 
@@ -49,7 +56,6 @@ const createBooking = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to create booking",
-      error: error.message,
     });
   }
 };
@@ -78,7 +84,6 @@ const getMyBookings = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch bookings",
-      error: error.message,
     });
   }
 };
@@ -86,6 +91,12 @@ const getMyBookings = async (req, res) => {
 // GET BOOKING BY ID
 const getBookingById = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid booking ID",
+      });
+    }
+
     const booking = await Booking.findOne({
       _id: req.params.id,
       studentId: req.user.userId,
@@ -113,7 +124,6 @@ const getBookingById = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch booking",
-      error: error.message,
     });
   }
 };
@@ -121,6 +131,12 @@ const getBookingById = async (req, res) => {
 // CANCEL BOOKING
 const cancelBooking = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid booking ID",
+      });
+    }
+
     const booking = await Booking.findOne({
       _id: req.params.id,
       studentId: req.user.userId,
@@ -163,7 +179,6 @@ const cancelBooking = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch/cancel booking",
-      error: error.message,
     });
   }
 };
@@ -199,7 +214,6 @@ const getMentorBookings = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch mentor bookings",
-      error: error.message,
     });
   }
 };
@@ -207,6 +221,12 @@ const getMentorBookings = async (req, res) => {
 // COMPLETE BOOKING
 const completeBooking = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid booking ID",
+      });
+    }
+
     // Find logged-in mentor
     const mentor = await Mentor.findOne({
       userId: req.user.userId,
@@ -253,7 +273,6 @@ const completeBooking = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to complete booking",
-      error: error.message,
     });
   }
 };

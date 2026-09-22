@@ -7,6 +7,36 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
+    if (role === "admin") {
+      return res.status(403).json({
+        message: "Admin role cannot be self-assigned",
+      });
+    }
+
+    const errors = [];
+    if (typeof name !== "string" || name.trim().length === 0) {
+      errors.push("Name is required");
+    } else if (name.trim().length < 2) {
+      errors.push("Name must be at least 2 characters");
+    }
+    if (typeof email !== "string" || email.trim().length === 0) {
+      errors.push("Email is required");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      errors.push("Please enter a valid email");
+    }
+    if (typeof password !== "string" || password.length < 6) {
+      errors.push("Password must be at least 6 characters");
+    }
+    if (role !== undefined && !["student", "mentor"].includes(role)) {
+      errors.push("Role must be student or mentor");
+    }
+    if (errors.length > 0) {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors,
+      });
+    }
+
     // Required fields validation
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -69,7 +99,6 @@ const registerUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Registration failed",
-      error: error.message,
     });
   }
 };
@@ -131,7 +160,6 @@ const loginUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Login failed",
-      error: error.message,
     });
   }
 };

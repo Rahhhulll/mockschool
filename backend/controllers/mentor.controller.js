@@ -1,10 +1,10 @@
 const Mentor = require("../models/mentor.model");
+const { isValidObjectId } = require("../utils/validation");
 
 // CREATE MENTOR PROFILE
 const createMentor = async (req, res) => {
   try {
     const {
-      userId,
       expertise,
       experience,
       bio,
@@ -12,16 +12,27 @@ const createMentor = async (req, res) => {
     } = req.body;
 
     if (
-      !userId ||
-      !expertise ||
-      experience === undefined ||
-      hourlyRate === undefined
+      !Array.isArray(expertise) ||
+      expertise.length === 0 ||
+      expertise.some((item) => typeof item !== "string" || item.trim().length === 0) ||
+      typeof experience !== "number" ||
+      !Number.isFinite(experience) ||
+      experience < 0 ||
+      typeof hourlyRate !== "number" ||
+      !Number.isFinite(hourlyRate) ||
+      hourlyRate <= 0
     ) {
       return res.status(400).json({
-        message: "userId, expertise, experience and hourlyRate are required",
+        message: "Validation failed",
+        errors: [
+          "expertise must be a non-empty array",
+          "experience must be a non-negative number",
+          "hourlyRate must be a positive number",
+        ],
       });
     }
 
+    const userId = req.user.userId;
     const existingMentor = await Mentor.findOne({ userId });
 
     if (existingMentor) {
@@ -45,7 +56,6 @@ const createMentor = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to create mentor profile",
-      error: error.message,
     });
   }
 };
@@ -65,7 +75,6 @@ const getAllMentors = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch mentors",
-      error: error.message,
     });
   }
 };
@@ -73,6 +82,12 @@ const getAllMentors = async (req, res) => {
 // GET MENTOR BY ID
 const getMentorById = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid mentor ID",
+      });
+    }
+
     const mentor = await Mentor.findById(req.params.id)
       .populate("userId", "name email");
 
@@ -89,7 +104,6 @@ const getMentorById = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch mentor",
-      error: error.message,
     });
   }
 };
@@ -99,8 +113,38 @@ const updateMentor = async (req, res) => {
   try {
     const { expertise, experience, bio, hourlyRate } = req.body;
 
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid mentor ID",
+      });
+    }
+
+    if (
+      !Array.isArray(expertise) ||
+      expertise.length === 0 ||
+      expertise.some((item) => typeof item !== "string" || item.trim().length === 0) ||
+      typeof experience !== "number" ||
+      !Number.isFinite(experience) ||
+      experience < 0 ||
+      typeof hourlyRate !== "number" ||
+      !Number.isFinite(hourlyRate) ||
+      hourlyRate <= 0
+    ) {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors: [
+          "expertise must be a non-empty array",
+          "experience must be a non-negative number",
+          "hourlyRate must be a positive number",
+        ],
+      });
+    }
+
     const mentor = await Mentor.findByIdAndUpdate(
-      req.params.id,
+      {
+        _id: req.params.id,
+        userId: req.user.userId,
+      },
       {
         expertise,
         experience,
@@ -126,7 +170,6 @@ const updateMentor = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to update mentor profile",
-      error: error.message,
     });
   }
 };
@@ -140,6 +183,12 @@ const verifyMentor = async (req, res) => {
     if (typeof isVerified !== "boolean") {
       return res.status(400).json({
         message: "isVerified must be true or false",
+      });
+    }
+
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid mentor ID",
       });
     }
 
@@ -169,7 +218,6 @@ const verifyMentor = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to update mentor verification",
-      error: error.message,
     });
   }
 };

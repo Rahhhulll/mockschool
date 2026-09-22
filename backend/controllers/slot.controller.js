@@ -1,14 +1,21 @@
 const Slot = require("../models/slot.model");
 const Mentor = require("../models/mentor.model");
+const {
+  isValidObjectId,
+  validateSlotInput,
+  timeToMinutes,
+} = require("../utils/validation");
 
 // CREATE SLOT
 const createSlot = async (req, res) => {
   try {
     const { date, startTime, endTime } = req.body;
 
-    if (!date || !startTime || !endTime) {
+    const validationErrors = validateSlotInput({ date, startTime, endTime });
+    if (validationErrors.length > 0) {
       return res.status(400).json({
-        message: "Date, startTime and endTime are required",
+        message: "Validation failed",
+        errors: validationErrors,
       });
     }
 
@@ -20,6 +27,25 @@ const createSlot = async (req, res) => {
     if (!mentor) {
       return res.status(404).json({
         message: "Mentor profile not found",
+      });
+    }
+
+    const slotDate = new Date(`${date}T00:00:00.000Z`);
+    const nextDate = new Date(slotDate);
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+    const existingSlots = await Slot.find({
+      mentorId: mentor._id,
+      date: { $gte: slotDate, $lt: nextDate },
+    }).select("startTime endTime");
+    const newStart = timeToMinutes(startTime);
+    const newEnd = timeToMinutes(endTime);
+
+    if (existingSlots.some((existingSlot) =>
+      newStart < timeToMinutes(existingSlot.endTime) &&
+      newEnd > timeToMinutes(existingSlot.startTime)
+    )) {
+      return res.status(409).json({
+        message: "Slot overlaps with an existing slot",
       });
     }
 
@@ -37,7 +63,6 @@ const createSlot = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to create slot",
-      error: error.message,
     });
   }
 };
@@ -70,7 +95,6 @@ const getMySlots = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch my slots",
-      error: error.message,
     });
   }
 };
@@ -80,9 +104,17 @@ const updateSlot = async (req, res) => {
   try {
     const { date, startTime, endTime } = req.body;
 
-    if (!date || !startTime || !endTime) {
+    const validationErrors = validateSlotInput({ date, startTime, endTime });
+    if (validationErrors.length > 0) {
       return res.status(400).json({
-        message: "Date, startTime and endTime are required",
+        message: "Validation failed",
+        errors: validationErrors,
+      });
+    }
+
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid slot ID",
       });
     }
 
@@ -94,6 +126,38 @@ const updateSlot = async (req, res) => {
     if (!mentor) {
       return res.status(404).json({
         message: "Mentor profile not found",
+      });
+    }
+
+    const currentSlot = await Slot.findOne({
+      _id: req.params.id,
+      mentorId: mentor._id,
+      isBooked: false,
+    }).select("_id");
+
+    if (!currentSlot) {
+      return res.status(404).json({
+        message: "Slot not found or slot is already booked",
+      });
+    }
+
+    const slotDate = new Date(`${date}T00:00:00.000Z`);
+    const nextDate = new Date(slotDate);
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+    const existingSlots = await Slot.find({
+      mentorId: mentor._id,
+      _id: { $ne: req.params.id },
+      date: { $gte: slotDate, $lt: nextDate },
+    }).select("startTime endTime");
+    const newStart = timeToMinutes(startTime);
+    const newEnd = timeToMinutes(endTime);
+
+    if (existingSlots.some((existingSlot) =>
+      newStart < timeToMinutes(existingSlot.endTime) &&
+      newEnd > timeToMinutes(existingSlot.startTime)
+    )) {
+      return res.status(409).json({
+        message: "Slot overlaps with an existing slot",
       });
     }
 
@@ -128,7 +192,6 @@ const updateSlot = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to update slot",
-      error: error.message,
     });
   }
 };
@@ -136,6 +199,12 @@ const updateSlot = async (req, res) => {
 // DELETE MY SLOT - MENTOR ONLY
 const deleteSlot = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid slot ID",
+      });
+    }
+
     // Find logged-in mentor
     const mentor = await Mentor.findOne({
       userId: req.user.userId,
@@ -166,7 +235,6 @@ const deleteSlot = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to delete slot",
-      error: error.message,
     });
   }
 };
@@ -197,7 +265,6 @@ const getAvailableSlots = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch available slots",
-      error: error.message,
     });
   }
 };

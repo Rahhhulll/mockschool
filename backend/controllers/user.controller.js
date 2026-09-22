@@ -1,4 +1,8 @@
 const User = require("../models/user.model");
+const Mentor = require("../models/mentor.model");
+const Booking = require("../models/booking.model");
+const Feedback = require("../models/feedback.model");
+const { isValidObjectId } = require("../utils/validation");
 
 // GET ALL USERS
 const getAllUsers = async (req, res) => {
@@ -13,7 +17,6 @@ const getAllUsers = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch users",
-      error: error.message,
     });
   }
 };
@@ -21,6 +24,12 @@ const getAllUsers = async (req, res) => {
 // GET USER BY ID
 const getUserById = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid user ID",
+      });
+    }
+
     const user = await User.findById(req.params.id).select("-password");
 
     if (!user) {
@@ -36,7 +45,6 @@ const getUserById = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch user",
-      error: error.message,
     });
   }
 };
@@ -44,11 +52,44 @@ const getUserById = async (req, res) => {
 // DELETE USER
 const deleteUser = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid user ID",
+      });
+    }
+
     const user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({
         message: "User not found",
+      });
+    }
+
+    if (String(user._id) === String(req.user.userId)) {
+      return res.status(400).json({
+        message: "Admin cannot delete their own account",
+      });
+    }
+
+    const mentor = await Mentor.findOne({ userId: user._id }).select("_id");
+    const relatedBooking = await Booking.exists({
+      $or: [
+        { studentId: user._id },
+        ...(mentor ? [{ mentorId: mentor._id }] : []),
+      ],
+    });
+    const relatedFeedback = await Feedback.exists({
+      $or: [
+        { studentId: user._id },
+        ...(mentor ? [{ mentorId: mentor._id }] : []),
+      ],
+    });
+
+    if (mentor || relatedBooking || relatedFeedback) {
+      return res.status(409).json({
+        message:
+          "User cannot be deleted while related mentor, booking or feedback records exist",
       });
     }
 
@@ -60,7 +101,6 @@ const deleteUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to delete user",
-      error: error.message,
     });
   }
 };

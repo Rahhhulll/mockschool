@@ -12,11 +12,19 @@ const mentorSchema = new mongoose.Schema(
     expertise: {
       type: [String],
       required: true,
+      validate: {
+        validator: (value) =>
+          Array.isArray(value) &&
+          value.length > 0 &&
+          value.every((item) => typeof item === "string" && item.trim().length > 0),
+        message: "Expertise must be a non-empty array",
+      },
     },
 
     experience: {
       type: Number,
       required: true,
+      min: 0,
     },
 
     bio: {
@@ -27,6 +35,7 @@ const mentorSchema = new mongoose.Schema(
     hourlyRate: {
       type: Number,
       required: true,
+      min: 0.01,
     },
 
     isVerified: {
