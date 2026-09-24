@@ -20,6 +20,11 @@ export const routes: Routes = [
       import('./pages/mentors/mentors.component').then(({ MentorsComponent }) => MentorsComponent),
   },
   {
+    path: 'mentors/:id',
+    loadComponent: () =>
+      import('./features/mentor/pages/mentor-profile/mentor-profile.component').then(({ MentorProfileComponent }) => MentorProfileComponent),
+  },
+  {
     path: 'login',
     loadComponent: () =>
       import('./features/auth/login/login.component').then(({ LoginComponent }) => LoginComponent),
