@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/auth.routes");
@@ -18,6 +19,14 @@ const PORT = process.env.PORT || 3000;
 
 // Connect Database
 connectDB();
+
+app.use(
+  cors({
+    origin: "http://localhost:4200",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Parse JSON request body
 app.use(express.json());

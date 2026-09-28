@@ -56,6 +56,13 @@ const upcomingBookingMatch = (ownerField, ownerId) => [
 
 const getCount = (result) => result[0]?.count || 0;
 
+const slotStartDate = (slot) => {
+  if (!slot?.date || !slot?.startTime) return null;
+  const date = new Date(slot.date);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Date(`${date.toISOString().slice(0, 10)}T${slot.startTime}:00Z`);
+};
+
 // GET STUDENT DASHBOARD
 const getStudentDashboard = async (req, res) => {
   try {
@@ -133,6 +140,8 @@ const getMentorDashboard = async (req, res) => {
       completedInterviews,
       earningsResult,
       ratingResult,
+      mentorBookings,
+      performanceResult,
     ] = await Promise.all([
       Booking.countDocuments({ mentorId }),
       Booking.aggregate(upcomingBookingMatch("mentorId", mentorId)),
@@ -172,7 +181,30 @@ const getMentorDashboard = async (req, res) => {
           },
         },
       ]),
+      Booking.find({ mentorId })
+        .populate("studentId", "name email")
+        .populate("slotId", "date startTime endTime")
+        .sort({ createdAt: -1 }),
+      Feedback.aggregate([
+        { $match: { mentorId } },
+        {
+          $group: {
+            _id: null,
+            technicalRating: { $avg: "$technicalRating" },
+            communicationRating: { $avg: "$communicationRating" },
+            confidenceRating: { $avg: "$confidenceRating" },
+          },
+        },
+      ]),
     ]);
+
+    const upcomingBookings = mentorBookings
+      .filter((booking) => booking.status === "confirmed" && slotStartDate(booking.slotId) > new Date())
+      .slice(0, 5);
+    const recentBookings = mentorBookings
+      .filter((booking) => booking.status !== "confirmed" || !(slotStartDate(booking.slotId) > new Date()))
+      .slice(0, 5);
+    const performanceSummary = performanceResult[0] || null;
 
     res.status(200).json({
       message: "Mentor dashboard fetched successfully",
@@ -181,7 +213,10 @@ const getMentorDashboard = async (req, res) => {
         upcomingInterviews: getCount(upcomingInterviewsResult),
         completedInterviews,
         totalEarnings: earningsResult[0]?.totalEarnings || 0,
-        averageRating: ratingResult[0]?.averageRating || 0,
+        averageRating: mentor.rating || ratingResult[0]?.averageRating || 0,
+        upcomingBookings,
+        recentBookings,
+        performanceSummary,
       },
     });
   } catch (error) {

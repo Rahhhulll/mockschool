@@ -1,0 +1,122 @@
+<main class="bookings-shell app-shell">
+  <app-page-header title="My Bookings" subtitle="View and manage your mock interview bookings.">
+    <button mat-flat-button color="primary" type="button" routerLink="/mentors">
+      <mat-icon>add</mat-icon>
+      Book New Interview
+    </button>
+  </app-page-header>
+
+  @if (loading()) {
+    <section class="state-panel" aria-live="polite">
+      <mat-spinner diameter="40" aria-label="Loading bookings"></mat-spinner>
+      <p>Loading bookings...</p>
+    </section>
+  } @else if (errorMessage()) {
+    <app-error-state
+      title="Unable to load your bookings."
+      [message]="errorMessage() ?? 'Please try again.'"
+      retryLabel="Retry"
+      (retry)="loadBookings()"
+    />
+  } @else {
+    <section class="toolbar" aria-label="Booking filters">
+      <div class="filter-group" role="group" aria-label="Filter bookings">
+        @for (option of filterOptions; track option.value) {
+          <button
+            mat-stroked-button
+            type="button"
+            [class.selected]="activeFilter() === option.value"
+            [attr.aria-pressed]="activeFilter() === option.value"
+            (click)="setFilter(option.value)"
+          >
+            {{ option.label }} ({{ countFor(option.value) }})
+          </button>
+        }
+      </div>
+      <label class="search-field">
+        <mat-icon aria-hidden="true">search</mat-icon>
+        <span class="visually-hidden">Search bookings</span>
+        <input #searchInput type="search" placeholder="Search mentor, ID or status" [value]="searchTerm()" (input)="setSearch(searchInput.value)" />
+        @if (searchTerm()) {
+          <button mat-icon-button type="button" aria-label="Clear search" (click)="clearSearch()">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </label>
+    </section>
+
+    @if (filteredBookings().length === 0) {
+      <mat-card class="content-card">
+        <app-empty-state
+          icon="event_busy"
+          [title]="emptyTitle()"
+          [description]="emptyDescription()"
+          [actionLabel]="allBookings().length ? '' : 'Find a Mentor'"
+          (action)="goToMentors()"
+        />
+      </mat-card>
+    } @else {
+      <mat-card class="content-card">
+        <div class="table-wrap">
+          <table mat-table [dataSource]="pagedBookings()" aria-label="My bookings">
+            <ng-container matColumnDef="mentor">
+              <th mat-header-cell *matHeaderCellDef>Mentor</th>
+              <td mat-cell *matCellDef="let booking">
+                <strong>{{ mentorName(booking) }}</strong>
+                @if (mentorExpertise(booking)) { <small>{{ mentorExpertise(booking) }}</small> }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef>Date</th>
+              <td mat-cell *matCellDef="let booking">{{ slot(booking)?.date | date:'MMM d, y':'UTC' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="time">
+              <th mat-header-cell *matHeaderCellDef>Time</th>
+              <td mat-cell *matCellDef="let booking">{{ timeRange(booking) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="amount">
+              <th mat-header-cell *matHeaderCellDef>Amount</th>
+              <td mat-cell *matCellDef="let booking">{{ amount(booking) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="payment">
+              <th mat-header-cell *matHeaderCellDef>Payment</th>
+              <td mat-cell *matCellDef="let booking"><mat-chip [class]="'status-chip ' + statusTone(booking.paymentStatus)">{{ statusLabel(booking.paymentStatus) }}</mat-chip></td>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Booking Status</th>
+              <td mat-cell *matCellDef="let booking"><mat-chip [class]="'status-chip ' + statusTone(booking.status)">{{ statusLabel(booking.status) }}</mat-chip></td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let booking">
+                <div class="actions">
+                  <a mat-button [routerLink]="['/student/bookings', booking._id]">View</a>
+                  @if (canCancel(booking)) {
+                    <button mat-button color="warn" type="button" [disabled]="cancellingId() === booking._id" (click)="confirmCancellation(booking)">Cancel</button>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns; trackBy: trackBooking"></tr>
+          </table>
+        </div>
+        <mat-paginator
+          [length]="filteredBookings().length"
+          [pageIndex]="pageIndex()"
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="[5, 10, 25]"
+          (page)="pageChanged($event)"
+          aria-label="Bookings pagination"
+        />
+      </mat-card>
+    }
+  }
+</main>

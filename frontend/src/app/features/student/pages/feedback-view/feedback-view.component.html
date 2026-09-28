@@ -1,0 +1,38 @@
+<main class="feedback-shell app-shell">
+  <app-page-header title="Interview Feedback" subtitle="Feedback from your mock interview.">
+    <button mat-stroked-button type="button" (click)="goToBooking()">Back to Booking</button>
+  </app-page-header>
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading feedback..." />
+  } @else if (errorMessage()) {
+    <app-error-state title="Unable to load feedback." [message]="errorMessage() ?? 'Please try again.'" retryLabel="Retry" (retry)="loadFeedback()" />
+  } @else if (noFeedback()) {
+    <mat-card class="empty-card">
+      <app-empty-state icon="rate_review" title="No feedback has been submitted for this interview yet." actionLabel="Back to Booking" (action)="goToBooking()" />
+    </mat-card>
+  } @else if (booking(); as bookingData) {
+    <section class="context-card">
+      <div>
+        <span class="eyebrow">Interview Feedback</span>
+        <h2>{{ mentorName(bookingData) }}</h2>
+        <p>{{ slot(bookingData)?.date | date:'MMMM d, y':'UTC' }} · {{ timeRange(bookingData) }}</p>
+      </div>
+      <app-status-badge [status]="bookingData.status" />
+    </section>
+
+    @if (feedback(); as feedbackData) {
+      <div class="feedback-grid">
+        <mat-card class="ratings-card">
+          <h2>Rating Summary</h2>
+          <div class="rating-row"><span>Technical Rating</span><app-rating [rating]="feedbackData.technicalRating" /></div>
+          <div class="rating-row"><span>Communication Rating</span><app-rating [rating]="feedbackData.communicationRating" /></div>
+          <div class="rating-row"><span>Confidence Rating</span><app-rating [rating]="feedbackData.confidenceRating" /></div>
+        </mat-card>
+        <mat-card class="feedback-card"><span class="eyebrow">Strengths</span><p>{{ feedbackData.strengths }}</p></mat-card>
+        <mat-card class="feedback-card"><span class="eyebrow">Areas to Improve</span><p>{{ feedbackData.weaknesses }}</p></mat-card>
+        <mat-card class="feedback-card overall"><span class="eyebrow">Overall Feedback</span><p>{{ feedbackData.overallFeedback }}</p></mat-card>
+      </div>
+    }
+  }
+</main>

@@ -1,0 +1,90 @@
+<main class="details-shell app-shell">
+  <app-page-header title="Booking Details" subtitle="View your mock interview booking details.">
+    <button mat-stroked-button type="button" (click)="goToBookings()">Back to My Bookings</button>
+  </app-page-header>
+  @if (loading()) {
+    <app-loading-spinner message="Loading booking details..." />
+  } @else if (errorMessage()) {
+    <app-error-state
+      [title]="errorMessage() === 'Booking not found.' ? 'Booking not found.' : 'Unable to load booking details.'"
+      [message]="errorMessage() ?? 'Please try again.'"
+      [retryLabel]="errorMessage() === 'Booking not found.' || errorMessage() === 'You do not have permission to view this booking.' ? 'Back to My Bookings' : 'Retry'"
+      (retry)="errorMessage() === 'Booking not found.' || errorMessage() === 'You do not have permission to view this booking.' ? goToBookings() : loadBooking()"
+    />
+  } @else if (booking(); as bookingData) {
+    <div class="details-layout">
+      <section class="primary-column">
+        <mat-card class="details-card">
+          <div class="section-heading"><mat-icon>person</mat-icon><h2>Mentor</h2></div>
+          <div class="mentor-heading">
+            <div>
+              <h3>{{ mentorName(bookingData) }}</h3>
+              @if (isVerified(bookingData)) { <span class="verified"><mat-icon>verified</mat-icon> Verified Mentor</span> }
+            </div>
+          </div>
+          <div class="info-grid">
+            <div><span>Expertise</span><strong>{{ mentorExpertise(bookingData) }}</strong></div>
+            <div><span>Experience</span><strong>{{ mentorExperience(bookingData) }}</strong></div>
+            <div><span>Rating</span><strong>{{ mentorRating(bookingData) }}</strong></div>
+          </div>
+        </mat-card>
+
+        <mat-card class="details-card">
+          <div class="section-heading"><mat-icon>school</mat-icon><h2>Student</h2></div>
+          <div class="info-grid">
+            <div><span>Name</span><strong>{{ studentName(bookingData) }}</strong></div>
+            <div><span>Email</span><strong>{{ studentEmail(bookingData) }}</strong></div>
+          </div>
+        </mat-card>
+
+        <mat-card class="details-card">
+          <div class="section-heading"><mat-icon>event</mat-icon><h2>Interview Slot</h2></div>
+          <div class="info-grid">
+            <div><span>Date</span><strong>{{ slot(bookingData)?.date | date:'MMMM d, y':'UTC' }}</strong></div>
+            <div><span>Time</span><strong>{{ timeRange(bookingData) }}</strong></div>
+            <div><span>Mentor</span><strong>{{ mentorName(bookingData) }}</strong></div>
+          </div>
+        </mat-card>
+      </section>
+
+      <aside class="secondary-column">
+        <mat-card class="details-card">
+          <div class="section-heading"><mat-icon>payments</mat-icon><h2>Payment</h2></div>
+          <div class="info-grid">
+            <div><span>Amount</span><strong>{{ bookingData.amount === undefined ? 'N/A' : '₹' + bookingData.amount }}</strong></div>
+            <div><span>Payment Status</span><app-status-badge [status]="bookingData.paymentStatus" /></div>
+            <div><span>Payment ID</span><strong class="breakable">{{ bookingData.paymentId || 'Not available' }}</strong></div>
+          </div>
+        </mat-card>
+
+        <mat-card class="details-card status-card">
+          <div class="section-heading"><mat-icon>assignment_turned_in</mat-icon><h2>Booking Status</h2></div>
+          <app-status-badge [status]="bookingData.status" />
+          @if (bookingData.createdAt) { <p class="booked-on">Booked On: {{ bookingData.createdAt | date:'MMMM d, y':'UTC' }}</p> }
+        </mat-card>
+
+        <mat-card class="details-card actions-card">
+          <div class="section-heading"><mat-icon>bolt</mat-icon><h2>Actions</h2></div>
+          @if (canCancel(bookingData)) {
+            <button mat-flat-button color="warn" type="button" [disabled]="cancelling()" (click)="confirmCancellation()">
+              @if (cancelling()) { Cancelling... } @else { Cancel Booking }
+            </button>
+          } @else if (bookingData.status === 'completed') {
+            <p>This interview has been completed and cannot be cancelled.</p>
+          } @else if (bookingData.status === 'cancelled') {
+            <p>This booking has already been cancelled.</p>
+          }
+          @if (bookingData.status === 'completed') {
+            <button mat-flat-button color="primary" type="button" [routerLink]="['/student/bookings', bookingData._id, 'feedback']">Give Feedback</button>
+          }
+          <button mat-stroked-button type="button" routerLink="/student/dashboard">View Dashboard</button>
+        </mat-card>
+
+        <mat-card class="details-card booking-meta">
+          <span>Booking ID</span>
+          <strong class="breakable">{{ bookingData._id }}</strong>
+        </mat-card>
+      </aside>
+    </div>
+  }
+</main>

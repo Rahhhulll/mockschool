@@ -1,0 +1,78 @@
+<main class="mentor-dashboard app-shell">
+  <app-page-header title="Mentor Dashboard" subtitle="Manage your interviews, slots and performance.">
+    <button mat-flat-button color="primary" type="button" disabled title="Slot management is not available yet">
+      <mat-icon>add</mat-icon>
+      Create Slot
+    </button>
+  </app-page-header>
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading your dashboard..." />
+  } @else if (errorMessage()) {
+    <app-error-state title="Unable to load your dashboard." [message]="errorMessage() ?? 'Please try again.'" retryLabel="Retry" (retry)="loadDashboard()" />
+  } @else if (dashboard(); as data) {
+    <section class="stats-grid" aria-label="Mentor summary">
+      @for (card of summaryCards(data); track card.label) {
+        <mat-card class="stat-card" [class]="card.accent">
+          <div class="card-top"><mat-icon aria-hidden="true">{{ card.icon }}</mat-icon><span>{{ card.label }}</span></div>
+          <strong>{{ card.value }}</strong>
+        </mat-card>
+      }
+    </section>
+
+    <section class="content-grid">
+      <mat-card class="panel">
+        <div class="panel-header"><h2>Upcoming Interviews</h2><span class="count">{{ numberValue(data.upcomingInterviews) }}</span></div>
+        @if (!(data.upcomingBookings?.length ?? 0)) {
+          <app-empty-state icon="schedule" title="No upcoming interviews." description="Upcoming interview details will appear here when available." />
+        } @else {
+          <div class="booking-list">
+            @for (booking of data.upcomingBookings; track booking._id) {
+              <article class="booking-item">
+                <div class="booking-copy"><strong>{{ studentName(booking) }}</strong><span>{{ slot(booking)?.date | date:'MMM d, y':'UTC' }}</span><span>{{ timeRange(booking) }}</span></div>
+                <app-status-badge [status]="booking.status" />
+              </article>
+            }
+          </div>
+        }
+      </mat-card>
+
+      <mat-card class="panel">
+        <div class="panel-header"><h2>Performance Summary</h2></div>
+        @if (data.performanceSummary; as performance) {
+          <div class="performance-list">
+            <div class="performance-item"><span>Average Rating</span><app-rating [rating]="rating(data)" [showValue]="true" /></div>
+            <div class="performance-item"><span>Technical</span><strong>{{ ratingValue(performance.technicalRating) }}</strong></div>
+            <div class="performance-item"><span>Communication</span><strong>{{ ratingValue(performance.communicationRating) }}</strong></div>
+            <div class="performance-item"><span>Confidence</span><strong>{{ ratingValue(performance.confidenceRating) }}</strong></div>
+          </div>
+        } @else if (rating(data) > 0) {
+          <div class="performance-item"><span>Average Rating</span><app-rating [rating]="rating(data)" [showValue]="true" /></div>
+        } @else {
+          <app-empty-state icon="insights" title="No performance data available yet." />
+        }
+      </mat-card>
+    </section>
+
+    <section class="content-grid">
+      <mat-card class="panel">
+        <div class="panel-header"><h2>Recent Interviews</h2><span class="count">{{ numberValue(data.completedInterviews) }}</span></div>
+        @if (!(data.recentBookings?.length ?? 0)) {
+          <app-empty-state icon="history" title="No recent interviews." description="Completed interview details will appear here when available." />
+        } @else {
+          <div class="booking-list">
+            @for (booking of data.recentBookings; track booking._id) {
+              <article class="booking-item"><div class="booking-copy"><strong>{{ studentName(booking) }}</strong><span>{{ slot(booking)?.date | date:'MMM d, y':'UTC' }}</span><span>{{ timeRange(booking) }}</span></div><app-status-badge [status]="booking.status" /></article>
+            }
+          </div>
+        }
+      </mat-card>
+
+      <mat-card class="panel quick-actions">
+        <div class="panel-header"><h2>Quick Actions</h2></div>
+        <p>Slot management is not available in the current mentor workspace.</p>
+        <button mat-stroked-button type="button" disabled>Manage Slots</button>
+      </mat-card>
+    </section>
+  }
+</main>

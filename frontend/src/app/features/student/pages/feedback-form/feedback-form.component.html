@@ -1,0 +1,73 @@
+<main class="feedback-shell app-shell">
+  <app-page-header title="Interview Feedback" subtitle="Share your feedback about your mock interview.">
+    <button mat-stroked-button type="button" (click)="goToBookings()">Back to My Bookings</button>
+  </app-page-header>
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading interview details..." />
+  } @else if (errorMessage()) {
+    <app-error-state
+      title="Unable to load feedback form."
+      [message]="errorMessage() ?? 'Please try again.'"
+      [retryLabel]="errorMessage() === 'Booking not found.' ? 'Back to My Bookings' : 'Retry'"
+      (retry)="errorMessage() === 'Booking not found.' ? goToBookings() : loadContext()"
+    />
+  } @else if (booking(); as bookingData) {
+    @if (bookingData.status !== 'completed') {
+      <mat-card class="notice-card">
+        <mat-icon>info</mat-icon>
+        <h2>{{ bookingData.status === 'cancelled' ? 'Feedback is not available for a cancelled interview.' : 'Feedback will be available after the interview is completed.' }}</h2>
+        <button mat-stroked-button type="button" [routerLink]="['/student/bookings', bookingData._id]">Back to Booking</button>
+      </mat-card>
+    } @else {
+      <mat-card class="context-card">
+        <span class="eyebrow">Interview</span>
+        <h2>{{ mentorName(bookingData) }}</h2>
+        <p>{{ slot(bookingData)?.date | date:'MMMM d, y':'UTC' }} · {{ timeRange(bookingData) }}</p>
+      </mat-card>
+
+      <mat-card class="form-card">
+        <form [formGroup]="feedbackForm" (ngSubmit)="submit()" novalidate>
+          <fieldset class="rating-group">
+            <legend>Technical Rating</legend>
+            <app-rating [rating]="feedbackForm.controls.technicalRating.value" [readonly]="false" (ratingChange)="setRating('technicalRating', $event)" />
+            @if (isInvalid('technicalRating')) { <small class="error">Technical rating is required.</small> }
+          </fieldset>
+          <fieldset class="rating-group">
+            <legend>Communication Rating</legend>
+            <app-rating [rating]="feedbackForm.controls.communicationRating.value" [readonly]="false" (ratingChange)="setRating('communicationRating', $event)" />
+            @if (isInvalid('communicationRating')) { <small class="error">Communication rating is required.</small> }
+          </fieldset>
+          <fieldset class="rating-group">
+            <legend>Confidence Rating</legend>
+            <app-rating [rating]="feedbackForm.controls.confidenceRating.value" [readonly]="false" (ratingChange)="setRating('confidenceRating', $event)" />
+            @if (isInvalid('confidenceRating')) { <small class="error">Confidence rating is required.</small> }
+          </fieldset>
+
+          <label class="field">
+            <span>Strengths</span>
+            <textarea formControlName="strengths" rows="4" placeholder="What did you do well during the interview?"></textarea>
+            @if (isInvalid('strengths')) { <small class="error">Please enter your strengths.</small> }
+          </label>
+          <label class="field">
+            <span>Weaknesses</span>
+            <textarea formControlName="weaknesses" rows="4" placeholder="What areas can be improved?"></textarea>
+            @if (isInvalid('weaknesses')) { <small class="error">Please enter your weaknesses.</small> }
+          </label>
+          <label class="field">
+            <span>Overall Feedback</span>
+            <textarea formControlName="overallFeedback" rows="5" placeholder="Share your overall experience and suggestions."></textarea>
+            @if (isInvalid('overallFeedback')) { <small class="error">Please enter your overall feedback.</small> }
+          </label>
+
+          <div class="form-actions">
+            <button mat-stroked-button type="button" [routerLink]="['/student/bookings', bookingData._id]">Cancel</button>
+            <button mat-flat-button color="primary" type="submit" [disabled]="feedbackForm.invalid || submitting()">
+              {{ submitting() ? 'Submitting...' : 'Submit Feedback' }}
+            </button>
+          </div>
+        </form>
+      </mat-card>
+    }
+  }
+</main>
