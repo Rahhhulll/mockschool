@@ -1,0 +1,12 @@
+:host { display: block; }
+.slots-page { padding-bottom: var(--space-4xl); }
+.slot-controls { display: flex; justify-content: flex-end; margin-bottom: var(--space-lg); }
+.slots-table { width: 100%; min-width: 760px; background: var(--color-surface); }
+.slots-table th { color: var(--color-text-primary); font-weight: var(--font-weight-semibold); }
+.slots-table td, .slots-table th { padding-inline: var(--space-lg); white-space: nowrap; }
+.locked-label { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.available-chip { --mdc-chip-elevated-container-color: var(--color-success-light); --mdc-chip-label-text-color: var(--color-success); }
+.booked-chip { --mdc-chip-elevated-container-color: var(--color-warning-light); --mdc-chip-label-text-color: var(--color-warning); }
+.responsive-table { border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+mat-paginator { background: transparent; }
+@media (max-width: 599px) { .slot-controls { justify-content: flex-start; overflow-x: auto; } .slots-table td, .slots-table th { padding-inline: var(--space-md); } }

@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { Booking, BookingSlot } from '../../../../core/models/booking.model';
@@ -27,7 +28,7 @@ interface SummaryCard {
 @Component({
   selector: 'app-mentor-dashboard',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, EmptyStateComponent, ErrorStateComponent, LoadingSpinnerComponent, PageHeaderComponent, RatingComponent, StatusBadgeComponent],
+  imports: [CommonModule, RouterLink, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, EmptyStateComponent, ErrorStateComponent, LoadingSpinnerComponent, PageHeaderComponent, RatingComponent, StatusBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './mentor-dashboard.component.html',
   styleUrls: ['./mentor-dashboard.component.scss'],

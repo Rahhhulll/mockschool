@@ -1,0 +1,7 @@
+:host { display: block; }
+.slot-form-page { padding-bottom: var(--space-4xl); }
+.form-panel { max-width: 640px; padding: var(--space-2xl); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+form { display: grid; gap: var(--space-md); }
+.form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-md); margin-top: var(--space-md); }
+.form-panel > p { margin-bottom: var(--space-lg); }
+@media (max-width: 599px) { .form-panel { padding: var(--space-lg); } .form-actions { flex-direction: column-reverse; } .form-actions button { width: 100%; } }

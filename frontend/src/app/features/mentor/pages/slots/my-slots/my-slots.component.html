@@ -1,0 +1,66 @@
+<main class="app-shell slots-page">
+  <app-page-header title="My Interview Slots" subtitle="Manage your available interview time slots.">
+    <a mat-flat-button color="primary" routerLink="/mentor/slots/create"><mat-icon>add</mat-icon> Create Slot</a>
+  </app-page-header>
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading your slots..." />
+  } @else if (errorMessage()) {
+    <app-error-state title="Unable to load your slots." [message]="errorMessage()" retryLabel="Retry" (retry)="loadSlots()" />
+  } @else if (!slots().length) {
+    <app-empty-state icon="event_available" title="No interview slots created yet." actionLabel="Create Slot" (action)="navigateToCreate()" />
+  } @else {
+    <section class="slot-controls" aria-label="Filter interview slots">
+      <mat-button-toggle-group [value]="filter()" (change)="setFilter($event.value)" aria-label="Filter slots">
+        <mat-button-toggle value="all">All ({{ count('all') }})</mat-button-toggle>
+        <mat-button-toggle value="available">Available ({{ count('available') }})</mat-button-toggle>
+        <mat-button-toggle value="booked">Booked ({{ count('booked') }})</mat-button-toggle>
+      </mat-button-toggle-group>
+    </section>
+
+    @if (visibleSlots().length) {
+      <div class="responsive-table" tabindex="0" aria-label="My interview slots">
+        <table mat-table [dataSource]="pagedSlots()" class="slots-table">
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef scope="col">Date</th>
+            <td mat-cell *matCellDef="let slot">{{ formatDate(slot.date) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="startTime">
+            <th mat-header-cell *matHeaderCellDef scope="col">Start Time</th>
+            <td mat-cell *matCellDef="let slot">{{ formatTime(slot.startTime) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="endTime">
+            <th mat-header-cell *matHeaderCellDef scope="col">End Time</th>
+            <td mat-cell *matCellDef="let slot">{{ formatTime(slot.endTime) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="duration">
+            <th mat-header-cell *matHeaderCellDef scope="col">Duration</th>
+            <td mat-cell *matCellDef="let slot">{{ duration(slot) }} min</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef scope="col">Booking Status</th>
+            <td mat-cell *matCellDef="let slot">
+              <mat-chip [class.booked-chip]="slot.isBooked" [class.available-chip]="!slot.isBooked">{{ slot.isBooked ? 'Booked' : 'Available' }}</mat-chip>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef scope="col">Actions</th>
+            <td mat-cell *matCellDef="let slot">
+              @if (!slot.isBooked) {
+                <a mat-icon-button [routerLink]="['/mentor/slots', slot._id, 'edit']" [attr.aria-label]="'Edit slot on ' + formatDate(slot.date)" matTooltip="Edit slot"><mat-icon>edit</mat-icon></a>
+                <button mat-icon-button type="button" [disabled]="deletingId() === slot._id" [attr.aria-label]="'Delete slot on ' + formatDate(slot.date)" matTooltip="Delete slot" (click)="confirmDelete(slot)"><mat-icon>delete</mat-icon></button>
+              } @else {
+                <span class="locked-label">No actions available</span>
+              }
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+      <mat-paginator [length]="visibleSlots().length" [pageIndex]="pageIndex()" [pageSize]="pageSize()" [pageSizeOptions]="[5, 10, 25]" (page)="pageChanged($event)" aria-label="Select slot page" />
+    } @else {
+      <app-empty-state icon="filter_list_off" title="No slots in this view." />
+    }
+  }
+</main>

@@ -1,0 +1,47 @@
+<main class="app-shell slot-form-page">
+  <app-page-header [title]="title()" subtitle="Add an available time slot for students to book.">
+    <a mat-stroked-button routerLink="/mentor/slots">Back to My Slots</a>
+  </app-page-header>
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading slot..." />
+  } @else if (loadError()) {
+    <section class="form-panel" role="alert">
+      <p>{{ loadError() }}</p>
+      <button mat-stroked-button type="button" routerLink="/mentor/slots">Back to My Slots</button>
+    </section>
+  } @else {
+    <section class="form-panel">
+      <form [formGroup]="slotForm" (ngSubmit)="submit()" novalidate>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Interview Date</mat-label>
+          <input matInput [matDatepicker]="picker" [min]="minDate" formControlName="date" required aria-describedby="date-error">
+          <mat-datepicker-toggle matIconSuffix [for]="picker" aria-label="Choose interview date" />
+          <mat-datepicker #picker />
+          @if (fieldInvalid('date')) { <mat-error id="date-error">Date is required.</mat-error> }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Start Time</mat-label>
+          <input matInput type="time" formControlName="startTime" required aria-describedby="start-error past-error">
+          @if (fieldInvalid('startTime')) { <mat-error id="start-error">Start time is required.</mat-error> }
+          @if (pastTimeInvalid) { <mat-error id="past-error">Choose a future date and time.</mat-error> }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>End Time</mat-label>
+          <input matInput type="time" formControlName="endTime" required aria-describedby="end-error range-error">
+          @if (fieldInvalid('endTime')) { <mat-error id="end-error">End time is required.</mat-error> }
+          @if (rangeInvalid) { <mat-error id="range-error">End time must be after start time.</mat-error> }
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-stroked-button type="button" routerLink="/mentor/slots">Back to My Slots</button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="slotForm.invalid || saving()">
+            @if (saving()) { {{ editing ? 'Updating Slot...' : 'Creating Slot...' }} } @else { {{ editing ? 'Save Changes' : 'Create Slot' }} }
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+</main>

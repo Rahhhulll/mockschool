@@ -1,6 +1,6 @@
 <main class="mentor-dashboard app-shell">
   <app-page-header title="Mentor Dashboard" subtitle="Manage your interviews, slots and performance.">
-    <button mat-flat-button color="primary" type="button" disabled title="Slot management is not available yet">
+    <button mat-flat-button color="primary" type="button" routerLink="/mentor/slots/create">
       <mat-icon>add</mat-icon>
       Create Slot
     </button>
@@ -70,8 +70,8 @@
 
       <mat-card class="panel quick-actions">
         <div class="panel-header"><h2>Quick Actions</h2></div>
-        <p>Slot management is not available in the current mentor workspace.</p>
-        <button mat-stroked-button type="button" disabled>Manage Slots</button>
+        <p>Keep your interview availability up to date.</p>
+        <button mat-stroked-button type="button" routerLink="/mentor/slots">Manage Slots</button>
       </mat-card>
     </section>
   }
