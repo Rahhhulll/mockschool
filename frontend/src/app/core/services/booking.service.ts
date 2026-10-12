@@ -15,6 +15,12 @@ export class BookingService {
       .pipe(map((response) => response.bookings));
   }
 
+  getMentorBookings(): Observable<Booking[]> {
+    return this.http
+      .get<MyBookingsResponse>(`${environment.apiUrl}/bookings/mentor-bookings`)
+      .pipe(map((response) => response.bookings));
+  }
+
   getBookingById(id: string): Observable<Booking> {
     return this.http
       .get<BookingResponse>(`${environment.apiUrl}/bookings/${id}`)
@@ -24,6 +30,12 @@ export class BookingService {
   cancelBooking(id: string): Observable<Booking> {
     return this.http
       .patch<BookingResponse>(`${environment.apiUrl}/bookings/${id}/cancel`, {})
+      .pipe(map((response) => response.booking));
+  }
+
+  completeBooking(id: string): Observable<Booking> {
+    return this.http
+      .patch<BookingResponse>(`${environment.apiUrl}/bookings/${id}/complete`, {})
       .pipe(map((response) => response.booking));
   }
 }

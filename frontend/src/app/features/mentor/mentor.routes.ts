@@ -7,6 +7,16 @@ export const MENTOR_ROUTES: Routes = [
 			import('./pages/mentor-dashboard/mentor-dashboard.component').then(({ MentorDashboardComponent }) => MentorDashboardComponent),
 	},
 	{
+		path: 'interviews',
+		loadComponent: () =>
+			import('./pages/interviews/mentor-interviews/mentor-interviews.component').then(({ MentorInterviewsComponent }) => MentorInterviewsComponent),
+	},
+	{
+		path: 'interviews/:id',
+		loadComponent: () =>
+			import('./pages/interviews/mentor-interview-details/mentor-interview-details.component').then(({ MentorInterviewDetailsComponent }) => MentorInterviewDetailsComponent),
+	},
+	{
 		path: 'slots',
 		loadComponent: () =>
 			import('./pages/slots/my-slots/my-slots.component').then(({ MySlotsComponent }) => MySlotsComponent),

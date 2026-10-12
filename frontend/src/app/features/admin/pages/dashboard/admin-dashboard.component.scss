@@ -1,0 +1,134 @@
+.admin-dashboard-page {
+  display: block;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  padding: 1rem 1.25rem;
+}
+
+.stat-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  margin-bottom: 0.75rem;
+}
+
+.stat-card strong {
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
+  line-height: 1.1;
+}
+
+.stat-card.primary { background: rgba(79, 70, 229, 0.05); }
+.stat-card.info { background: rgba(59, 130, 246, 0.05); }
+.stat-card.success { background: rgba(34, 197, 94, 0.05); }
+.stat-card.warning { background: rgba(245, 158, 11, 0.05); }
+.stat-card.neutral { background: rgba(148, 163, 184, 0.05); }
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.chart-card {
+  padding: 1.25rem;
+}
+
+.card-header h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.chart-label {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.bar-shell {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.wide-chart {
+  grid-column: 1 / -1;
+}
+
+.revenue-chart {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  min-height: 220px;
+}
+
+.revenue-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 180px;
+}
+
+.revenue-bar-shell {
+  display: flex;
+  align-items: end;
+  width: 100%;
+  max-width: 52px;
+  height: 120px;
+  padding: 0.25rem;
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 10px;
+}
+
+.revenue-bar {
+  width: 100%;
+  border-radius: 8px;
+  min-height: 8px;
+}
+
+.revenue-item span,
+.revenue-item strong {
+  font-size: 0.74rem;
+}
+
+@media (max-width: 640px) {
+  .stats-grid,
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-row {
+    grid-template-columns: 1fr;
+  }
+}

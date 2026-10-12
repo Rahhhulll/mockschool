@@ -4,6 +4,23 @@ const Booking = require("../models/booking.model");
 const Feedback = require("../models/feedback.model");
 const { isValidObjectId } = require("../utils/validation");
 
+const normalizePositiveInteger = (value, fallback, maxValue) => {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number <= 0) {
+    return fallback;
+  }
+  return Math.min(number, maxValue);
+};
+
+const getPaginationMeta = (page, limit, totalItems) => ({
+  page,
+  limit,
+  totalItems,
+  totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / limit),
+});
+
+const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const getAdminDashboard = async (req, res) => {
   try {
     const [
@@ -11,23 +28,22 @@ const getAdminDashboard = async (req, res) => {
       totalMentors,
       verifiedMentors,
       bookingCounts,
-      paidBookings,
-      pendingPayments,
-      revenueResult,
-      feedbackResult,
+      totalFeedback,
+      revenueSummary,
+      revenueOverview,
     ] = await Promise.all([
       User.aggregate([
         {
           $group: {
             _id: null,
-            total: { $sum: 1 },
-            students: {
+            totalUsers: { $sum: 1 },
+            totalStudents: {
               $sum: { $cond: [{ $eq: ["$role", "student"] }, 1, 0] },
             },
-            mentors: {
+            totalMentors: {
               $sum: { $cond: [{ $eq: ["$role", "mentor"] }, 1, 0] },
             },
-            admins: {
+            totalAdmins: {
               $sum: { $cond: [{ $eq: ["$role", "admin"] }, 1, 0] },
             },
           },
@@ -39,97 +55,111 @@ const getAdminDashboard = async (req, res) => {
         {
           $group: {
             _id: null,
-            total: { $sum: 1 },
+            totalBookings: { $sum: 1 },
             confirmed: {
               $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] },
             },
-            completed: {
+            completedInterviews: {
               $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
             },
-            cancelled: {
+            cancelledBookings: {
               $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
             },
           },
         },
       ]),
-      Booking.countDocuments({ paymentStatus: "paid" }),
-      Booking.countDocuments({ paymentStatus: "pending" }),
+      Feedback.countDocuments(),
       Booking.aggregate([
-        { $match: { paymentStatus: "paid" } },
-        { $group: { _id: null, totalRevenue: { $sum: "$amount" } } },
-      ]),
-      Feedback.aggregate([
         {
-          $project: {
-            rating: {
-              $avg: [
-                "$technicalRating",
-                "$communicationRating",
-                "$confidenceRating",
-              ],
-            },
+          $match: {
+            paymentStatus: "paid",
+            status: { $ne: "cancelled" },
           },
         },
         {
           $group: {
             _id: null,
-            total: { $sum: 1 },
-            averageRating: { $avg: "$rating" },
+            revenue: { $sum: "$amount" },
           },
         },
+      ]),
+      Booking.aggregate([
+        {
+          $match: {
+            paymentStatus: "paid",
+            status: { $ne: "cancelled" },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: {
+                format: "%Y-%m",
+                date: "$createdAt",
+                timezone: "UTC",
+              },
+            },
+            totalRevenue: { $sum: "$amount" },
+          },
+        },
+        { $sort: { _id: 1 } },
       ]),
     ]);
 
     const users = userCounts[0] || {
-      total: 0,
-      students: 0,
-      mentors: 0,
-      admins: 0,
+      totalUsers: 0,
+      totalStudents: 0,
+      totalMentors: 0,
+      totalAdmins: 0,
     };
     const bookings = bookingCounts[0] || {
-      total: 0,
+      totalBookings: 0,
       confirmed: 0,
-      completed: 0,
-      cancelled: 0,
+      completedInterviews: 0,
+      cancelledBookings: 0,
     };
-    const feedback = feedbackResult[0] || {
-      total: 0,
-      averageRating: 0,
+    const revenue = revenueSummary[0]?.revenue || 0;
+
+    const dashboardData = {
+      stats: {
+        totalUsers: users.totalUsers,
+        totalStudents: users.totalStudents,
+        totalMentors,
+        verifiedMentors,
+        totalBookings: bookings.totalBookings,
+        completedInterviews: bookings.completedInterviews,
+        cancelledBookings: bookings.cancelledBookings,
+        revenue,
+        totalFeedback,
+      },
+      bookingStatistics: [
+        { label: "Confirmed", value: bookings.confirmed || 0 },
+        { label: "Completed", value: bookings.completedInterviews || 0 },
+        { label: "Cancelled", value: bookings.cancelledBookings || 0 },
+      ],
+      userStatistics: [
+        { label: "Students", value: users.totalStudents },
+        { label: "Mentors", value: users.totalMentors },
+        { label: "Admins", value: users.totalAdmins },
+      ],
+      revenueOverview: revenueOverview.map((entry) => {
+        const date = new Date(`${entry._id}-01T00:00:00Z`);
+        return {
+          label: new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(date),
+          value: entry.totalRevenue || 0,
+        };
+      }),
     };
 
     res.status(200).json({
+      success: true,
       message: "Admin dashboard fetched successfully",
-      dashboard: {
-        users: {
-          total: users.total,
-          students: users.students,
-          mentors: users.mentors,
-          admins: users.admins,
-        },
-        mentors: {
-          total: totalMentors,
-          verified: verifiedMentors,
-          unverified: totalMentors - verifiedMentors,
-        },
-        bookings: {
-          total: bookings.total,
-          confirmed: bookings.confirmed,
-          completed: bookings.completed,
-          cancelled: bookings.cancelled,
-        },
-        payments: {
-          paidBookings,
-          pendingPayments,
-          totalRevenue: revenueResult[0]?.totalRevenue || 0,
-        },
-        feedback: {
-          total: feedback.total,
-          averageRating: feedback.averageRating || 0,
-        },
-      },
+      data: dashboardData,
+      dashboard: dashboardData,
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to fetch admin dashboard",
     });
   }
@@ -137,35 +167,46 @@ const getAdminDashboard = async (req, res) => {
 
 const getAdminUsers = async (req, res) => {
   try {
+    const rawPage = normalizePositiveInteger(req.query.page, 1, 1000);
+    const rawLimit = normalizePositiveInteger(req.query.limit, 10, 100);
+    const page = rawPage;
+    const limit = rawLimit;
     const { role, search } = req.query;
     const filter = {};
 
-    if (role !== undefined) {
-      if (!["student", "mentor", "admin"].includes(role)) {
+    if (role !== undefined && role !== "all") {
+      if (!["student", "mentor", "admin"].includes(String(role))) {
         return res.status(400).json({
+          success: false,
           message: "Invalid role filter",
         });
       }
-      filter.role = role;
+      filter.role = String(role);
     }
 
     if (search) {
-      const escapedSearch = String(search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const searchRegex = new RegExp(escapedSearch, "i");
-      filter.$or = [{ name: searchRegex }, { email: searchRegex }];
+      const escapedSearch = escapeRegExp(search);
+      filter.$or = [{ name: new RegExp(escapedSearch, "i") }, { email: new RegExp(escapedSearch, "i") }];
     }
 
+    const totalItems = await User.countDocuments(filter);
     const users = await User.find(filter)
       .select("-password")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     res.status(200).json({
+      success: true,
       message: "Admin users fetched successfully",
-      count: users.length,
+      data: users,
       users,
+      count: users.length,
+      pagination: getPaginationMeta(page, limit, totalItems),
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to fetch admin users",
     });
   }
@@ -175,24 +216,50 @@ const getAdminUserById = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
+        success: false,
         message: "Invalid user ID",
       });
     }
 
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findById(req.params.id).select("-password").lean();
 
     if (!user) {
       return res.status(404).json({
+        success: false,
         message: "User not found",
       });
     }
 
+    const mentorProfile = await Mentor.findOne({ userId: user._id }).lean();
+    const cleanMentorProfile = mentorProfile
+      ? {
+          _id: mentorProfile._id,
+          expertise: mentorProfile.expertise,
+          experience: mentorProfile.experience,
+          bio: mentorProfile.bio,
+          hourlyRate: mentorProfile.hourlyRate,
+          isVerified: mentorProfile.isVerified,
+          rating: mentorProfile.rating,
+          createdAt: mentorProfile.createdAt,
+          updatedAt: mentorProfile.updatedAt,
+        }
+      : null;
+
     res.status(200).json({
+      success: true,
       message: "Admin user fetched successfully",
-      user,
+      data: {
+        ...user,
+        mentorProfile: cleanMentorProfile,
+      },
+      user: {
+        ...user,
+        mentorProfile: cleanMentorProfile,
+      },
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to fetch admin user",
     });
   }
@@ -202,12 +269,14 @@ const deleteAdminUser = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
+        success: false,
         message: "Invalid user ID",
       });
     }
 
-    if (req.params.id === String(req.user.userId)) {
+    if (String(req.user.userId) === String(req.params.id)) {
       return res.status(400).json({
+        success: false,
         message: "Admin cannot delete their own account",
       });
     }
@@ -216,38 +285,45 @@ const deleteAdminUser = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({
+        success: false,
         message: "User not found",
       });
     }
 
+    if (user.role === "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount <= 1) {
+        return res.status(409).json({
+          success: false,
+          message: "Cannot delete the last remaining admin account",
+        });
+      }
+    }
+
     const mentor = await Mentor.findOne({ userId: user._id }).select("_id");
     const relatedBooking = await Booking.exists({
-      $or: [
-        { studentId: user._id },
-        ...(mentor ? [{ mentorId: mentor._id }] : []),
-      ],
+      $or: [{ studentId: user._id }, ...(mentor ? [{ mentorId: mentor._id }] : [])],
     });
     const relatedFeedback = await Feedback.exists({
-      $or: [
-        { studentId: user._id },
-        ...(mentor ? [{ mentorId: mentor._id }] : []),
-      ],
+      $or: [{ studentId: user._id }, ...(mentor ? [{ mentorId: mentor._id }] : [])],
     });
 
     if (mentor || relatedBooking || relatedFeedback) {
       return res.status(409).json({
-        message:
-          "User cannot be deleted while related mentor, booking or feedback records exist",
+        success: false,
+        message: "User cannot be deleted while related mentor, booking, or feedback records exist",
       });
     }
 
     await User.findByIdAndDelete(user._id);
 
     res.status(200).json({
+      success: true,
       message: "User deleted successfully",
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to delete user",
     });
   }
@@ -255,28 +331,53 @@ const deleteAdminUser = async (req, res) => {
 
 const getAdminMentors = async (req, res) => {
   try {
+    const rawPage = normalizePositiveInteger(req.query.page, 1, 1000);
+    const rawLimit = normalizePositiveInteger(req.query.limit, 10, 100);
+    const page = rawPage;
+    const limit = rawLimit;
     const filter = {};
 
-    if (req.query.verified !== undefined) {
-      if (!["true", "false"].includes(req.query.verified)) {
+    const requestedStatus = req.query.verificationStatus ?? req.query.verified ?? "all";
+    if (requestedStatus !== "all") {
+      if (requestedStatus === "verified" || requestedStatus === "true") {
+        filter.isVerified = true;
+      } else if (requestedStatus === "pending" || requestedStatus === "false") {
+        filter.isVerified = false;
+      } else {
         return res.status(400).json({
-          message: "verified must be true or false",
+          success: false,
+          message: "Invalid verification status filter",
         });
       }
-      filter.isVerified = req.query.verified === "true";
     }
 
+    if (req.query.search) {
+      const searchRegex = new RegExp(escapeRegExp(req.query.search), "i");
+      const matchingUserIds = await User.find({
+        $or: [{ name: searchRegex }, { email: searchRegex }],
+      }).select("_id");
+      const userIds = matchingUserIds.map((user) => user._id);
+      filter.$or = [{ expertise: searchRegex }, { userId: { $in: userIds } }];
+    }
+
+    const totalItems = await Mentor.countDocuments(filter);
     const mentors = await Mentor.find(filter)
       .populate("userId", "name email role")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     res.status(200).json({
+      success: true,
       message: "Admin mentors fetched successfully",
-      count: mentors.length,
+      data: mentors,
       mentors,
+      count: mentors.length,
+      pagination: getPaginationMeta(page, limit, totalItems),
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to fetch admin mentors",
     });
   }
@@ -286,6 +387,7 @@ const verifyAdminMentor = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
+        success: false,
         message: "Invalid mentor ID",
       });
     }
@@ -294,6 +396,7 @@ const verifyAdminMentor = async (req, res) => {
 
     if (typeof isVerified !== "boolean") {
       return res.status(400).json({
+        success: false,
         message: "isVerified must be true or false",
       });
     }
@@ -306,18 +409,20 @@ const verifyAdminMentor = async (req, res) => {
 
     if (!mentor) {
       return res.status(404).json({
+        success: false,
         message: "Mentor not found",
       });
     }
 
     res.status(200).json({
-      message: isVerified
-        ? "Mentor verified successfully"
-        : "Mentor unverified successfully",
+      success: true,
+      message: isVerified ? "Mentor verified successfully" : "Mentor unverified successfully",
+      data: mentor,
       mentor,
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to update mentor verification",
     });
   }
@@ -325,27 +430,51 @@ const verifyAdminMentor = async (req, res) => {
 
 const getAdminBookings = async (req, res) => {
   try {
-    const { status, paymentStatus } = req.query;
+    const rawPage = normalizePositiveInteger(req.query.page, 1, 1000);
+    const rawLimit = normalizePositiveInteger(req.query.limit, 10, 100);
+    const page = rawPage;
+    const limit = rawLimit;
     const filter = {};
 
-    if (status !== undefined) {
-      if (!["confirmed", "completed", "cancelled"].includes(status)) {
+    if (req.query.status && req.query.status !== "all") {
+      if (!["confirmed", "completed", "cancelled"].includes(String(req.query.status))) {
         return res.status(400).json({
+          success: false,
           message: "Invalid booking status filter",
         });
       }
-      filter.status = status;
+      filter.status = String(req.query.status);
     }
 
-    if (paymentStatus !== undefined) {
-      if (!["paid", "pending"].includes(paymentStatus)) {
+    if (req.query.paymentStatus && req.query.paymentStatus !== "all") {
+      if (!["paid", "pending"].includes(String(req.query.paymentStatus))) {
         return res.status(400).json({
+          success: false,
           message: "Invalid payment status filter",
         });
       }
-      filter.paymentStatus = paymentStatus;
+      filter.paymentStatus = String(req.query.paymentStatus);
     }
 
+    if (req.query.search) {
+      const searchRegex = new RegExp(escapeRegExp(req.query.search), "i");
+      const matchingUsers = await User.find({
+        $or: [{ name: searchRegex }, { email: searchRegex }],
+      }).select("_id");
+      const matchingStudentIds = matchingUsers.map((user) => user._id);
+      const matchingMentorIds = await Mentor.find({
+        userId: { $in: matchingStudentIds },
+      }).select("_id");
+      const mentorIds = matchingMentorIds.map((mentor) => mentor._id);
+      const bookingId = isValidObjectId(String(req.query.search)) ? String(req.query.search) : null;
+      filter.$or = [
+        { studentId: { $in: matchingStudentIds } },
+        { mentorId: { $in: mentorIds } },
+        ...(bookingId ? [{ _id: bookingId }] : []),
+      ];
+    }
+
+    const totalItems = await Booking.countDocuments(filter);
     const bookings = await Booking.find(filter)
       .populate("studentId", "name email")
       .populate({
@@ -356,15 +485,21 @@ const getAdminBookings = async (req, res) => {
         },
       })
       .populate("slotId", "date startTime endTime")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     res.status(200).json({
+      success: true,
       message: "Admin bookings fetched successfully",
-      count: bookings.length,
+      data: bookings,
       bookings,
+      count: bookings.length,
+      pagination: getPaginationMeta(page, limit, totalItems),
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to fetch admin bookings",
     });
   }
@@ -405,6 +540,7 @@ const getAdminFeedback = async (req, res) => {
     };
 
     res.status(200).json({
+      success: true,
       message: "Admin feedback fetched successfully",
       count: feedback.length,
       feedback,
@@ -417,6 +553,7 @@ const getAdminFeedback = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: "Failed to fetch admin feedback",
     });
   }

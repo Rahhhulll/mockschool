@@ -1,0 +1,128 @@
+<main class="app-shell interview-details-page">
+  <app-page-header title="Interview Details" subtitle="Review the student, interview schedule and payment status.">
+    <div class="header-actions">
+      <button mat-stroked-button type="button" (click)="goToInterviews()">
+        <mat-icon>arrow_back</mat-icon>
+        Back to My Interviews
+      </button>
+      <button mat-stroked-button type="button" (click)="goToDashboard()">
+        <mat-icon>dashboard</mat-icon>
+        Dashboard
+      </button>
+    </div>
+  </app-page-header>
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading interview details..." />
+  } @else if (errorMessage()) {
+    <app-error-state title="Unable to load your interviews." [message]="errorMessage() ?? 'Please try again.'" retryLabel="Retry" (retry)="loadBooking()" />
+  } @else if (booking(); as currentBooking) {
+    <div class="details-grid">
+      <mat-card class="detail-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Booking ID</p>
+            <h2>{{ currentBooking._id }}</h2>
+          </div>
+          <app-status-badge [status]="currentBooking.status" />
+        </div>
+
+        @if (currentBooking.status === 'cancelled') {
+          <p class="status-note">This interview was cancelled.</p>
+        }
+
+        <div class="detail-list">
+          <div class="detail-item">
+            <span class="label">Student</span>
+            <strong>{{ studentName(currentBooking) }}</strong>
+            <small>{{ studentEmail(currentBooking) }}</small>
+          </div>
+          <div class="detail-item">
+            <span class="label">Interview Date</span>
+            <strong>{{ formatDate(currentBooking) }}</strong>
+          </div>
+          <div class="detail-item">
+            <span class="label">Time</span>
+            <strong>{{ timeRange(currentBooking) }}</strong>
+          </div>
+          <div class="detail-item">
+            <span class="label">Booking Status</span>
+            <app-status-badge [status]="currentBooking.status" />
+          </div>
+          <div class="detail-item">
+            <span class="label">Payment Status</span>
+            <app-status-badge [status]="currentBooking.paymentStatus" />
+          </div>
+          <div class="detail-item">
+            <span class="label">Amount</span>
+            <strong>{{ amountDisplay(currentBooking) }}</strong>
+          </div>
+          @if (currentBooking.paymentId) {
+            <div class="detail-item">
+              <span class="label">Payment ID</span>
+              <strong>{{ currentBooking.paymentId }}</strong>
+            </div>
+          }
+        </div>
+      </mat-card>
+
+      <mat-card class="detail-card actions-card">
+        <h3>Actions</h3>
+
+        @if (currentBooking.status === 'confirmed') {
+          <button mat-flat-button color="primary" type="button" [disabled]="completing()" (click)="confirmCompletion()">
+            {{ completing() ? 'Completing...' : 'Complete Interview' }}
+          </button>
+        }
+
+        @if (currentBooking.status === 'completed') {
+          @if (feedback(); as currentFeedback) {
+            <div class="feedback-box">
+              <div class="feedback-header">
+                <h4>Feedback</h4>
+                <button mat-stroked-button type="button" (click)="showFeedback.set(!showFeedback())">
+                  {{ showFeedback() ? 'Hide Feedback' : 'View Feedback' }}
+                </button>
+              </div>
+
+              @if (showFeedback()) {
+                <div class="feedback-content">
+                  <div class="rating-row">
+                    <span>Technical</span>
+                    <strong>{{ currentFeedback.technicalRating }}/5</strong>
+                  </div>
+                  <div class="rating-row">
+                    <span>Communication</span>
+                    <strong>{{ currentFeedback.communicationRating }}/5</strong>
+                  </div>
+                  <div class="rating-row">
+                    <span>Confidence</span>
+                    <strong>{{ currentFeedback.confidenceRating }}/5</strong>
+                  </div>
+                  @if (currentFeedback.strengths) {
+                    <div>
+                      <span class="label">Strengths</span>
+                      <p>{{ currentFeedback.strengths }}</p>
+                    </div>
+                  }
+                  @if (currentFeedback.weaknesses) {
+                    <div>
+                      <span class="label">Areas to Improve</span>
+                      <p>{{ currentFeedback.weaknesses }}</p>
+                    </div>
+                  }
+                  @if (currentFeedback.overallFeedback) {
+                    <div>
+                      <span class="label">Overall Feedback</span>
+                      <p>{{ currentFeedback.overallFeedback }}</p>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      </mat-card>
+    </div>
+  }
+</main>

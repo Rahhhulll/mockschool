@@ -1,0 +1,27 @@
+.interview-controls {
+  display: flex;
+  justify-content: flex-start;
+  margin: 0 0 1.25rem;
+}
+
+.interviews-table {
+  width: 100%;
+}
+
+.student-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.student-cell span {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+  .interview-controls {
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+}

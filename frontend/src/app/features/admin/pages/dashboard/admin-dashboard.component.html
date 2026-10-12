@@ -1,0 +1,89 @@
+<main class="app-shell admin-dashboard-page">
+  <app-page-header title="Admin Dashboard" subtitle="Overview of MockSchool platform activity" />
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading admin dashboard..." />
+  } @else if (errorMessage()) {
+    <app-error-state title="Unable to load the admin dashboard." [message]="errorMessage() ?? 'Please try again.'" retryLabel="Retry" (retry)="loadDashboard()" />
+  } @else if (stats(); as statsData) {
+    <section class="stats-grid" aria-label="Admin dashboard statistics">
+      @for (card of statCards(); track card.label) {
+        <mat-card class="stat-card" [class]="card.accent">
+          <div class="stat-top">
+            <mat-icon aria-hidden="true">{{ card.icon }}</mat-icon>
+            <span>{{ card.label }}</span>
+          </div>
+          <strong>{{ card.value }}</strong>
+        </mat-card>
+      }
+    </section>
+
+    <section class="charts-grid" aria-label="Admin dashboard charts">
+      <mat-card class="chart-card">
+        <div class="card-header">
+          <h2>Booking Statistics</h2>
+        </div>
+
+        @if (bookingStatistics().length) {
+          <div class="chart-bars" role="img" [attr.aria-label]="'Booking statistics chart'">
+            @for (item of bookingStatistics(); track item.label) {
+              <div class="chart-row">
+                <span class="chart-label">{{ item.label }}</span>
+                <div class="bar-shell">
+                  <div class="bar" [style.width]="chartWidth(item.value, chartMax(bookingStatistics()))" [style.background]="item.label === 'Confirmed' ? '#4f46e5' : item.label === 'Completed' ? '#22c55e' : '#f59e0b' "></div>
+                </div>
+                <strong>{{ formatNumber(item.value) }}</strong>
+              </div>
+            }
+          </div>
+        } @else {
+          <app-empty-state icon="bar_chart" title="No booking data available yet." />
+        }
+      </mat-card>
+
+      <mat-card class="chart-card">
+        <div class="card-header">
+          <h2>User Statistics</h2>
+        </div>
+
+        @if (userStatistics().length) {
+          <div class="chart-bars" role="img" [attr.aria-label]="'User statistics chart'">
+            @for (item of userStatistics(); track item.label) {
+              <div class="chart-row">
+                <span class="chart-label">{{ item.label }}</span>
+                <div class="bar-shell">
+                  <div class="bar" [style.width]="chartWidth(item.value, chartMax(userStatistics()))" [style.background]="item.label === 'Students' ? '#3b82f6' : item.label === 'Mentors' ? '#8b5cf6' : '#14b8a6'"></div>
+                </div>
+                <strong>{{ formatNumber(item.value) }}</strong>
+              </div>
+            }
+          </div>
+        } @else {
+          <app-empty-state icon="people" title="No user data available yet." />
+        }
+      </mat-card>
+
+      <mat-card class="chart-card wide-chart">
+        <div class="card-header">
+          <h2>Revenue Overview</h2>
+        </div>
+
+        @if (revenueOverview().length) {
+          <div class="revenue-chart" role="img" [attr.aria-label]="'Revenue overview chart'">
+            @for (item of revenueOverview(); track item.label) {
+              <div class="revenue-item">
+                <div class="revenue-bar-shell">
+                  <div class="revenue-bar" [style.height]="chartWidth(item.value, chartMax(revenueOverview()))" [style.background]="'#14b8a6'"></div>
+                </div>
+                <span>{{ item.label }}</span>
+                <strong>{{ formatCurrency(item.value) }}</strong>
+              </div>
+            }
+          </div>
+        } @else {
+          <app-empty-state icon="trending_up" title="No revenue data available yet." />
+        }
+      </mat-card>
+    </section>
+  }
+</main>

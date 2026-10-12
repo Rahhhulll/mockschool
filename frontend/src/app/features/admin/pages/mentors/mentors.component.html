@@ -1,0 +1,128 @@
+<main class="admin-page mentors-page">
+  <app-page-header title="Mentor Verification" subtitle="Review mentor profiles and manage verification status" />
+
+  <section class="toolbar" aria-label="Mentor filters">
+    <mat-form-field appearance="outline">
+      <mat-label>Search mentors</mat-label>
+      <input matInput [value]="searchTerm()" (input)="updateSearch($any($event.target).value)" placeholder="Search by name, email or expertise" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Status</mat-label>
+      <mat-select [value]="filter()" (selectionChange)="updateFilter($event.value)">
+        @for (option of filterOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </section>
+
+  @if (loading()) {
+    <app-loading-spinner message="Loading mentors..." />
+  } @else if (errorMessage()) {
+    <app-error-state title="Unable to load mentors" [message]="errorMessage() ?? 'Please try again.'" retryLabel="Retry" (retry)="reload()" />
+  } @else {
+    <section class="content-grid">
+      <div class="table-panel">
+        @if (!mentors().length) {
+          <app-empty-state title="No mentors found" [description]="searchTerm() ? 'Try a different search or filter.' : 'No mentors are available for review.'" />
+        } @else {
+          <div class="table-wrap">
+            <table mat-table [dataSource]="mentors()" aria-label="Mentor verification list">
+              <ng-container matColumnDef="mentor">
+                <th mat-header-cell *matHeaderCellDef>Mentor</th>
+                <td mat-cell *matCellDef="let mentor">{{ mentorName(mentor) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="email">
+                <th mat-header-cell *matHeaderCellDef>Email</th>
+                <td mat-cell *matCellDef="let mentor">{{ mentorEmail(mentor) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="expertise">
+                <th mat-header-cell *matHeaderCellDef>Expertise</th>
+                <td mat-cell *matCellDef="let mentor">{{ mentor.expertise?.join(', ') || 'N/A' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="experience">
+                <th mat-header-cell *matHeaderCellDef>Experience</th>
+                <td mat-cell *matCellDef="let mentor">{{ formatExperience(mentor.experience) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="hourlyRate">
+                <th mat-header-cell *matHeaderCellDef>Hourly Rate</th>
+                <td mat-cell *matCellDef="let mentor">{{ formatCurrency(mentor.hourlyRate) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="rating">
+                <th mat-header-cell *matHeaderCellDef>Rating</th>
+                <td mat-cell *matCellDef="let mentor">{{ mentor.rating ?? 0 }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Verification</th>
+                <td mat-cell *matCellDef="let mentor">
+                  <mat-chip-set>
+                    <mat-chip [color]="mentor.isVerified ? 'primary' : 'warn'" selected>{{ mentorStatusLabel(mentor.isVerified) }}</mat-chip>
+                  </mat-chip-set>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let mentor">
+                  <div class="row-actions">
+                    <button mat-stroked-button color="primary" type="button" (click)="viewMentor(mentor)">View Details</button>
+                    <button mat-stroked-button [color]="mentor.isVerified ? 'warn' : 'primary'" type="button" [disabled]="updatingId() === mentor._id" (click)="verifyMentor(mentor, !mentor.isVerified)">
+                      {{ updatingId() === mentor._id ? 'Updating...' : (mentor.isVerified ? 'Unverify' : 'Verify') }}
+                    </button>
+                  </div>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            </table>
+          </div>
+
+          <mat-paginator
+            [length]="totalItems()"
+            [pageIndex]="pageIndex()"
+            [pageSize]="pageSize()"
+            [pageSizeOptions]="[10, 25, 50]"
+            (page)="pageChanged($event)"
+            aria-label="Select page of mentors"
+          />
+        }
+      </div>
+
+      <aside class="details-panel">
+        @if (detailsLoading()) {
+          <div class="details-skeleton">
+            <app-loading-spinner message="Loading mentor details..." />
+          </div>
+        } @else if (selectedMentor()) {
+          <div class="details-card">
+            <h2>Mentor Details</h2>
+            <dl>
+              <div><dt>Name</dt><dd>{{ mentorName(selectedMentor()!) }}</dd></div>
+              <div><dt>Email</dt><dd>{{ mentorEmail(selectedMentor()!) }}</dd></div>
+              <div><dt>Expertise</dt><dd>{{ selectedMentor()?.expertise?.join(', ') || 'N/A' }}</dd></div>
+              <div><dt>Experience</dt><dd>{{ formatExperience(selectedMentor()?.experience) }}</dd></div>
+              <div><dt>Bio</dt><dd>{{ selectedMentor()?.bio || 'N/A' }}</dd></div>
+              <div><dt>Hourly Rate</dt><dd>{{ formatCurrency(selectedMentor()?.hourlyRate) }}</dd></div>
+              <div><dt>Rating</dt><dd>{{ selectedMentor()?.rating ?? 0 }}</dd></div>
+              <div><dt>Status</dt><dd>{{ mentorStatusLabel(selectedMentor()?.isVerified) }}</dd></div>
+            </dl>
+          </div>
+        } @else {
+          <div class="details-empty">
+            <h2>Mentor Details</h2>
+            <p>Select a mentor to review profile information.</p>
+          </div>
+        }
+      </aside>
+    </section>
+  }
+</main>
