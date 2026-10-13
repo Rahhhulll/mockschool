@@ -118,6 +118,7 @@ export class FeedbackFormComponent {
           void this.router.navigate(['/student/bookings', bookingId, 'feedback', 'view']);
           return;
         }
+        if (error.status === 401) return;
         this.notification.error(error.status === 400 ? 'Please check your feedback and try again.' : 'Unable to submit feedback. Please try again.');
       },
     });

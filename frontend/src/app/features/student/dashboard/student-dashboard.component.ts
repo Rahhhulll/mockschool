@@ -14,6 +14,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { RatingComponent } from '../../../shared/components/rating/rating.component';
+import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 
 interface DashboardCard {
@@ -36,6 +37,7 @@ interface DashboardCard {
     ErrorStateComponent,
     PageHeaderComponent,
     RatingComponent,
+    SkeletonLoaderComponent,
     StatusBadgeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,14 +48,7 @@ interface DashboardCard {
       </app-page-header>
 
       @if (loading()) {
-        <section class="loading-grid" aria-live="polite" aria-label="Loading dashboard">
-          @for (item of [1,2,3,4]; track item) {
-            <mat-card class="stat-card skeleton-card">
-              <div class="skeleton-line short"></div>
-              <div class="skeleton-line medium"></div>
-            </mat-card>
-          }
-        </section>
+        <app-skeleton-loader variant="card" [count]="4" />
       } @else if (error()) {
         <app-error-state
           title="Unable to load your dashboard."

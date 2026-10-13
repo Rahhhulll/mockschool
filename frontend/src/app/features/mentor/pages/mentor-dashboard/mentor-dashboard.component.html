@@ -7,7 +7,7 @@
   </app-page-header>
 
   @if (loading()) {
-    <app-loading-spinner message="Loading your dashboard..." />
+    <app-skeleton-loader variant="card" [count]="5" />
   } @else if (errorMessage()) {
     <app-error-state title="Unable to load your dashboard." [message]="errorMessage() ?? 'Please try again.'" retryLabel="Retry" (retry)="loadDashboard()" />
   } @else if (dashboard(); as data) {

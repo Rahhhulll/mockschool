@@ -13,8 +13,8 @@ import { MentorDashboardData } from '../../../../core/models/dashboard.model';
 import { DashboardService } from '../../../../core/services/dashboard.service';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
-import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { SkeletonLoaderComponent } from '../../../../shared/components/skeleton-loader/skeleton-loader.component';
 import { RatingComponent } from '../../../../shared/components/rating/rating.component';
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 
@@ -28,7 +28,7 @@ interface SummaryCard {
 @Component({
   selector: 'app-mentor-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, EmptyStateComponent, ErrorStateComponent, LoadingSpinnerComponent, PageHeaderComponent, RatingComponent, StatusBadgeComponent],
+  imports: [CommonModule, RouterLink, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, EmptyStateComponent, ErrorStateComponent, PageHeaderComponent, RatingComponent, SkeletonLoaderComponent, StatusBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './mentor-dashboard.component.html',
   styleUrls: ['./mentor-dashboard.component.scss'],

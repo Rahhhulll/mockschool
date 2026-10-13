@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -18,6 +19,7 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { SkeletonLoaderComponent } from '../../../../shared/components/skeleton-loader/skeleton-loader.component';
 import { NotificationService } from '../../../../shared/services/notification.service';
 import { AdminService } from '../../services/admin.service';
 import { AdminUser } from '../../models/admin-dashboard.model';
@@ -43,6 +45,7 @@ type UserRoleFilter = 'all' | 'student' | 'mentor' | 'admin';
     ErrorStateComponent,
     LoadingSpinnerComponent,
     PageHeaderComponent,
+    SkeletonLoaderComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './users.component.html',
@@ -62,7 +65,7 @@ export class UsersComponent {
   readonly pageSize = signal(10);
   readonly searchTerm = signal('');
   readonly roleFilter = signal<UserRoleFilter>('all');
-  readonly deletingId = signal<string | null>(null);
+  readonly deletingIds = signal<ReadonlySet<string>>(new Set());
   readonly selectedUser = signal<AdminUser | null>(null);
   readonly detailsLoading = signal(false);
 
@@ -152,7 +155,7 @@ export class UsersComponent {
 
   deleteUser(user: AdminUser): void {
     const userId = user._id ?? user.id ?? '';
-    if (!userId) {
+    if (!userId || this.deletingIds().has(userId)) {
       return;
     }
     if (!this.canDeleteUser(user)) {
@@ -168,23 +171,37 @@ export class UsersComponent {
       destructive: true,
     };
 
-    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, { data })
+    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, {
+      data,
+      role: 'alertdialog',
+      ariaLabelledBy: 'confirmation-dialog-title',
+      ariaDescribedBy: 'confirmation-dialog-message',
+    })
       .afterClosed()
       .subscribe((confirmed) => {
-        if (!confirmed) {
+        if (!confirmed || this.deletingIds().has(userId)) {
           return;
         }
 
-        this.deletingId.set(userId);
-        this.adminService.deleteUser(userId).pipe(finalize(() => this.deletingId.set(null))).subscribe({
+        this.deletingIds.update((ids) => new Set(ids).add(userId));
+        this.adminService.deleteUser(userId).pipe(finalize(() => {
+          this.deletingIds.update((ids) => {
+            const next = new Set(ids);
+            next.delete(userId);
+            return next;
+          });
+        })).subscribe({
           next: () => {
             this.notification.success('User deleted successfully.');
             this.selectedUser.set(null);
             this.reload();
           },
-          error: (error) => {
-            const message = error?.error?.message ?? 'Unable to delete this user.';
-            this.notification.error(message);
+          error: (error: HttpErrorResponse) => {
+            if (error.status !== 401) {
+              this.notification.error(error.status === 409
+                ? 'A protection rule prevents deletion. The account may be the last admin or have related records.'
+                : 'Unable to delete this user. Please try again.');
+            }
           },
         });
       });

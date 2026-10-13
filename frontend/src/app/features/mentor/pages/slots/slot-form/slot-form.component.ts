@@ -151,7 +151,7 @@ export class SlotFormComponent {
     } else if (error.status === 400) {
       this.notification.error('Invalid slot data. Check the date and time and try again.');
     } else if (error.status === 401) {
-      this.notification.error('Your session has expired. Please sign in again.');
+      return;
     } else if (error.status === 403) {
       this.notification.error('Only mentors can manage interview slots.');
     } else {

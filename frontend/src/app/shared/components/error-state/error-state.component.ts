@@ -12,7 +12,9 @@ import { MatIconModule } from '@angular/material/icon';
       <mat-icon aria-hidden="true">error_outline</mat-icon>
       <h2>{{ title }}</h2>
       <p>{{ message }}</p>
-      <button mat-stroked-button type="button" (click)="retry.emit()">{{ retryLabel }}</button>
+      @if (showRetry) {
+        <button mat-stroked-button type="button" (click)="retry.emit()">{{ retryLabel }}</button>
+      }
     </section>
   `,
   styles: [`
@@ -23,7 +25,8 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class ErrorStateComponent {
   @Input() title = 'Something went wrong';
-  @Input() message = 'We could not load this content.';
-  @Input() retryLabel = 'Try again';
+  @Input() message = "We couldn't load this information. Please try again.";
+  @Input() retryLabel = 'Retry';
+  @Input() showRetry = true;
   @Output() readonly retry = new EventEmitter<void>();
 }

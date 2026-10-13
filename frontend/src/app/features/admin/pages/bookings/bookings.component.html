@@ -28,7 +28,7 @@
   </section>
 
   @if (loading()) {
-    <app-loading-spinner message="Loading bookings..." />
+    <app-skeleton-loader variant="table" [count]="6" />
   } @else if (errorMessage()) {
     <app-error-state title="Unable to load bookings" [message]="errorMessage() ?? 'Please try again.'" retryLabel="Retry" (retry)="reload()" />
   } @else {

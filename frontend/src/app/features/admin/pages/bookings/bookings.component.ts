@@ -6,15 +6,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { debounceTime, finalize, Subject, switchMap } from 'rxjs';
 
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
-import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { SkeletonLoaderComponent } from '../../../../shared/components/skeleton-loader/skeleton-loader.component';
 import { AdminBooking, AdminBookingListResponse } from '../../models/admin-dashboard.model';
 import { AdminService } from '../../services/admin.service';
 
@@ -32,13 +31,12 @@ type PaymentStatusFilter = 'all' | 'pending' | 'paid';
     MatIconModule,
     MatInputModule,
     MatPaginatorModule,
-    MatProgressSpinnerModule,
     MatSelectModule,
     MatTableModule,
     EmptyStateComponent,
     ErrorStateComponent,
-    LoadingSpinnerComponent,
     PageHeaderComponent,
+    SkeletonLoaderComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './bookings.component.html',

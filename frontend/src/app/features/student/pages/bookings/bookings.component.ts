@@ -1,4 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -57,7 +58,7 @@ export class BookingsComponent {
   readonly searchTerm = signal('');
   readonly pageIndex = signal(0);
   readonly pageSize = signal(10);
-  readonly cancellingId = signal<string | null>(null);
+  readonly cancellingIds = signal<ReadonlySet<string>>(new Set());
   readonly displayedColumns = ['mentor', 'date', 'time', 'amount', 'payment', 'status', 'actions'];
   readonly filterOptions: ReadonlyArray<{ value: BookingFilter; label: string }> = [
     { value: 'all', label: 'All' },
@@ -174,25 +175,41 @@ export class BookingsComponent {
   }
 
   confirmCancellation(booking: Booking): void {
+    if (this.cancellingIds().has(booking._id)) return;
+
     const data: ConfirmationDialogData = {
       title: 'Cancel Interview?',
-      message: 'Are you sure you want to cancel this booking?',
+      message: `Cancel your interview with ${this.mentorName(booking)}? This will cancel the booking.`,
       confirmLabel: 'Cancel Booking',
       cancelLabel: 'Keep Booking',
       destructive: true,
     };
-    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, { data }).afterClosed().pipe(
-      filter((confirmed): confirmed is true => confirmed === true),
+    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, {
+      data,
+      role: 'alertdialog',
+      ariaLabelledBy: 'confirmation-dialog-title',
+      ariaDescribedBy: 'confirmation-dialog-message',
+    }).afterClosed().pipe(
+      filter((confirmed): confirmed is true => confirmed === true && !this.cancellingIds().has(booking._id)),
       switchMap(() => {
-        this.cancellingId.set(booking._id);
-        return this.bookingService.cancelBooking(booking._id).pipe(finalize(() => this.cancellingId.set(null)));
+        this.cancellingIds.update((ids) => new Set(ids).add(booking._id));
+        return this.bookingService.cancelBooking(booking._id).pipe(finalize(() => {
+          this.cancellingIds.update((ids) => {
+            const next = new Set(ids);
+            next.delete(booking._id);
+            return next;
+          });
+        }));
       }),
     ).subscribe({
       next: () => {
         this.allBookings.update((bookings) => bookings.map((item) => item._id === booking._id ? { ...item, status: 'cancelled' as BookingStatus } : item));
         this.notification.success('Booking cancelled successfully.');
+        this.loadBookings();
       },
-      error: () => this.notification.error('Unable to cancel this booking. Please try again.'),
+      error: (error: HttpErrorResponse) => {
+        if (error.status !== 401) this.notification.error('Unable to cancel this booking. Please try again.');
+      },
     });
   }
 

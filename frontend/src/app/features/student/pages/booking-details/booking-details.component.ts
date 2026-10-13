@@ -122,24 +122,27 @@ export class BookingDetailsComponent {
       destructive: true,
     };
 
-    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, { data }).afterClosed().pipe(
+    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, {
+      data,
+      role: 'alertdialog',
+      ariaLabelledBy: 'confirmation-dialog-title',
+      ariaDescribedBy: 'confirmation-dialog-message',
+    }).afterClosed().pipe(
       filter((confirmed): confirmed is true => confirmed === true),
       switchMap(() => {
         this.cancelling.set(true);
         const bookingId = currentBooking._id;
-        return this.bookingService.cancelBooking(bookingId).pipe(
-          switchMap(() => this.bookingService.getBookingById(bookingId)),
-          finalize(() => this.cancelling.set(false)),
-        );
+        return this.bookingService.cancelBooking(bookingId).pipe(finalize(() => this.cancelling.set(false)));
       }),
     ).subscribe({
       next: (booking) => {
         this.booking.set(booking);
         this.notification.success('Booking cancelled successfully.');
+        this.loadBooking();
       },
       error: (error: HttpErrorResponse) => {
         if (error.status === 400) this.loadBooking();
-        this.notification.error('Unable to cancel booking. Please try again.');
+        if (error.status !== 401) this.notification.error('Unable to cancel booking. Please try again.');
       },
     });
   }

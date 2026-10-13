@@ -10,8 +10,8 @@ import { AdminDashboardData, DashboardChartItem } from '../../models/admin-dashb
 import { AdminService } from '../../services/admin.service';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
-import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { SkeletonLoaderComponent } from '../../../../shared/components/skeleton-loader/skeleton-loader.component';
 
 interface StatCard {
   label: string;
@@ -30,8 +30,8 @@ interface StatCard {
     MatIconModule,
     EmptyStateComponent,
     ErrorStateComponent,
-    LoadingSpinnerComponent,
     PageHeaderComponent,
+    SkeletonLoaderComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-dashboard.component.html',

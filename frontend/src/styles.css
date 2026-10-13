@@ -205,10 +205,33 @@ p {
 
 .notification-success .mdc-snackbar__surface {
   background: var(--color-success);
+  color: #fff;
 }
 
 .notification-error .mdc-snackbar__surface {
   background: var(--color-error);
+  color: #fff;
+}
+
+.notification-warning .mdc-snackbar__surface {
+  background: var(--color-warning);
+  color: #fff;
+}
+
+.notification-info .mdc-snackbar__surface {
+  background: var(--color-info);
+  color: #fff;
+}
+
+.notification-success .mdc-snackbar__label,
+.notification-error .mdc-snackbar__label,
+.notification-warning .mdc-snackbar__label,
+.notification-info .mdc-snackbar__label,
+.notification-success .mat-mdc-button,
+.notification-error .mat-mdc-button,
+.notification-warning .mat-mdc-button,
+.notification-info .mat-mdc-button {
+  color: #fff;
 }
 
 @media (max-width: 959px) {

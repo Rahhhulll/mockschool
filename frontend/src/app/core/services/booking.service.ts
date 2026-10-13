@@ -1,9 +1,12 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { Booking, BookingResponse, MyBookingsResponse } from '../models/booking.model';
+import { SKIP_GLOBAL_HTTP_ERROR_NOTIFICATION } from '../interceptors/http-error-context';
+
+const localErrorContext = () => new HttpContext().set(SKIP_GLOBAL_HTTP_ERROR_NOTIFICATION, true);
 
 @Injectable({ providedIn: 'root' })
 export class BookingService {
@@ -29,13 +32,13 @@ export class BookingService {
 
   cancelBooking(id: string): Observable<Booking> {
     return this.http
-      .patch<BookingResponse>(`${environment.apiUrl}/bookings/${id}/cancel`, {})
+      .patch<BookingResponse>(`${environment.apiUrl}/bookings/${id}/cancel`, {}, { context: localErrorContext() })
       .pipe(map((response) => response.booking));
   }
 
   completeBooking(id: string): Observable<Booking> {
     return this.http
-      .patch<BookingResponse>(`${environment.apiUrl}/bookings/${id}/complete`, {})
+      .patch<BookingResponse>(`${environment.apiUrl}/bookings/${id}/complete`, {}, { context: localErrorContext() })
       .pipe(map((response) => response.booking));
   }
 }

@@ -43,7 +43,7 @@ export class MySlotsComponent {
   readonly filter = signal<SlotFilter>('all');
   readonly pageIndex = signal(0);
   readonly pageSize = signal(10);
-  readonly deletingId = signal<string | null>(null);
+  readonly deletingIds = signal<ReadonlySet<string>>(new Set());
   readonly displayedColumns = ['date', 'startTime', 'endTime', 'duration', 'status', 'actions'];
   readonly visibleSlots = computed(() => {
     const filter = this.filter();
@@ -103,32 +103,43 @@ export class MySlotsComponent {
   }
 
   confirmDelete(slot: Slot): void {
+    if (this.deletingIds().has(slot._id)) return;
+
     const data: ConfirmationDialogData = {
       title: 'Delete Slot?',
-      message: 'Are you sure you want to delete this interview slot?',
+      message: `Delete the interview slot on ${this.formatDate(slot.date)} from ${this.formatTime(slot.startTime)} to ${this.formatTime(slot.endTime)}? Booked slots cannot be deleted.`,
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
       destructive: true,
     };
-    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, { data }).afterClosed().pipe(
-      filter((confirmed): confirmed is true => confirmed === true),
+    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, {
+      data,
+      role: 'alertdialog',
+      ariaLabelledBy: 'confirmation-dialog-title',
+      ariaDescribedBy: 'confirmation-dialog-message',
+    }).afterClosed().pipe(
+      filter((confirmed): confirmed is true => confirmed === true && !this.deletingIds().has(slot._id)),
       switchMap(() => {
-        this.deletingId.set(slot._id);
-        return this.slotService.deleteSlot(slot._id).pipe(finalize(() => this.deletingId.set(null)));
+        this.deletingIds.update((ids) => new Set(ids).add(slot._id));
+        return this.slotService.deleteSlot(slot._id).pipe(finalize(() => {
+          this.deletingIds.update((ids) => {
+            const next = new Set(ids);
+            next.delete(slot._id);
+            return next;
+          });
+        }));
       }),
     ).subscribe({
       next: () => {
-        this.slots.update((slots) => slots.filter((item) => item._id !== slot._id));
-        const lastPage = Math.max(0, Math.ceil(this.visibleSlots().length / this.pageSize()) - 1);
-        this.pageIndex.set(Math.min(this.pageIndex(), lastPage));
         this.notification.success('Slot deleted successfully.');
+        this.loadSlots();
       },
       error: (error: HttpErrorResponse) => {
         if (error.status === 404) {
           this.notification.error('This slot has already been booked and cannot be deleted.');
           this.loadSlots();
         } else if (error.status === 401) {
-          this.notification.error('Your session has expired. Please sign in again.');
+          return;
         } else if (error.status === 403) {
           this.notification.error('Only mentors can delete interview slots.');
         } else {

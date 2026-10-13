@@ -133,3 +133,47 @@ export interface AdminMentorDetailResponse {
 export interface AdminBookingListResponse extends AdminListResponse<AdminBooking> {
   data?: AdminBooking[];
 }
+
+export interface AdminFeedback {
+  _id: string;
+  bookingId?: {
+    _id?: string;
+  } | string | null;
+  studentId?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+  } | string | null;
+  mentorId?: {
+    _id?: string;
+    userId?: {
+      _id?: string;
+      name?: string;
+      email?: string;
+    };
+  } | string | null;
+  technicalRating?: number;
+  communicationRating?: number;
+  confidenceRating?: number;
+  strengths?: string;
+  weaknesses?: string;
+  overallFeedback?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminFeedbackSummary {
+  totalFeedback: number;
+  averageTechnicalRating: number | null;
+  averageCommunicationRating: number | null;
+  averageConfidenceRating: number | null;
+  overallAverageRating: number | null;
+}
+
+export interface AdminFeedbackResponse {
+  success?: boolean;
+  message?: string;
+  data?: AdminFeedback[];
+  pagination?: PaginationMeta;
+  summary?: AdminFeedbackSummary;
+}

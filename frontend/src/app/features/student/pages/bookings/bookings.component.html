@@ -98,7 +98,9 @@
                 <div class="actions">
                   <a mat-button [routerLink]="['/student/bookings', booking._id]">View</a>
                   @if (canCancel(booking)) {
-                    <button mat-button color="warn" type="button" [disabled]="cancellingId() === booking._id" (click)="confirmCancellation(booking)">Cancel</button>
+                    <button mat-button color="warn" type="button" [disabled]="cancellingIds().has(booking._id)" (click)="confirmCancellation(booking)">
+                      {{ cancellingIds().has(booking._id) ? 'Cancelling...' : 'Cancel' }}
+                    </button>
                   }
                 </div>
               </td>

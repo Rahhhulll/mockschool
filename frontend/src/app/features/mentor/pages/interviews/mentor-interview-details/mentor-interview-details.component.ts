@@ -131,28 +131,34 @@ export class MentorInterviewDetailsComponent {
 
     const data: ConfirmationDialogData = {
       title: 'Complete Interview?',
-      message: 'Are you sure you want to mark this interview as completed?',
+      message: `Mark interview ${currentBooking._id.slice(-8)} with ${this.studentName(currentBooking)} on ${this.formatDate(currentBooking)} (${this.timeRange(currentBooking)}) as completed?`,
       confirmLabel: 'Complete Interview',
       cancelLabel: 'Cancel',
     };
 
-    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, { data }).afterClosed().pipe(
+    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, {
+      data,
+      role: 'alertdialog',
+      ariaLabelledBy: 'confirmation-dialog-title',
+      ariaDescribedBy: 'confirmation-dialog-message',
+    }).afterClosed().pipe(
       filter((confirmed): confirmed is true => confirmed === true),
+      filter(() => !this.completing() && this.booking()?.status === 'confirmed'),
       switchMap(() => {
         this.completing.set(true);
         return this.bookingService.completeBooking(currentBooking._id).pipe(
-          switchMap(() => this.bookingService.getMentorBookings()),
           finalize(() => this.completing.set(false)),
         );
       }),
     ).subscribe({
-      next: (bookings) => {
-        const refreshedBooking = bookings.find((booking) => booking._id === currentBooking._id) ?? null;
-        this.booking.set(refreshedBooking ?? { ...currentBooking, status: 'completed' });
+      next: (booking) => {
+        this.booking.set(booking);
         this.notification.success('Interview marked as completed.');
         this.loadFeedback(currentBooking._id);
       },
       error: (error: HttpErrorResponse) => {
+        if (error.status === 401) return;
+
         const serverMessage = typeof error.error?.message === 'string' ? error.error.message : '';
         const lowerMessage = serverMessage.toLowerCase();
 
@@ -185,7 +191,7 @@ export class MentorInterviewDetailsComponent {
     this.feedbackService.getFeedbackByBooking(bookingId).subscribe({
       next: (response) => this.feedback.set(response.feedback),
       error: (error: HttpErrorResponse) => {
-        if (error.status !== 404) {
+        if (error.status !== 404 && error.status !== 401) {
           this.notification.error('Unable to load feedback for this interview.');
         }
         this.feedback.set(null);

@@ -507,8 +507,115 @@ const getAdminBookings = async (req, res) => {
 
 const getAdminFeedback = async (req, res) => {
   try {
-    const [feedback, statistics] = await Promise.all([
-      Feedback.find()
+    const rawPage = normalizePositiveInteger(req.query.page, 1, 1000);
+    const rawLimit = normalizePositiveInteger(req.query.limit, 10, 100);
+    const page = rawPage;
+    const limit = rawLimit;
+    const { search, rating } = req.query;
+    const filter = {};
+
+    if (rating !== undefined && rating !== "all") {
+      const parsedRating = Number(rating);
+      if (!Number.isInteger(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid rating filter",
+        });
+      }
+
+      filter.$expr = {
+        $and: [
+          {
+            $gte: [
+              {
+                $divide: [
+                  {
+                    $add: [
+                      "$technicalRating",
+                      "$communicationRating",
+                      "$confidenceRating",
+                    ],
+                  },
+                  3,
+                ],
+              },
+              parsedRating,
+            ],
+          },
+          {
+            $lt: [
+              {
+                $divide: [
+                  {
+                    $add: [
+                      "$technicalRating",
+                      "$communicationRating",
+                      "$confidenceRating",
+                    ],
+                  },
+                  3,
+                ],
+              },
+              parsedRating + 1,
+            ],
+          },
+        ],
+      };
+    }
+
+    if (search) {
+      const searchRegex = new RegExp(escapeRegExp(search), "i");
+      const matchingUsers = await User.find({
+        $or: [{ name: searchRegex }, { email: searchRegex }],
+      }).select("_id");
+      const studentIds = matchingUsers.map((user) => user._id);
+      const mentorUsers = await User.find({
+        $or: [{ name: searchRegex }, { email: searchRegex }],
+      }).select("_id");
+      const mentorProfiles = await Mentor.find({
+        userId: { $in: mentorUsers.map((user) => user._id) },
+      }).select("_id");
+      const mentorIds = mentorProfiles.map((mentor) => mentor._id);
+      const bookingId = isValidObjectId(String(search)) ? String(search) : null;
+
+      filter.$or = [
+        { studentId: { $in: studentIds } },
+        { mentorId: { $in: mentorIds } },
+        { strengths: searchRegex },
+        { weaknesses: searchRegex },
+        { overallFeedback: searchRegex },
+        ...(bookingId ? [{ bookingId }] : []),
+      ];
+    }
+
+    const [summaryData, totalItems, feedback] = await Promise.all([
+      Feedback.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalFeedback: { $sum: 1 },
+            averageTechnicalRating: { $avg: "$technicalRating" },
+            averageCommunicationRating: { $avg: "$communicationRating" },
+            averageConfidenceRating: { $avg: "$confidenceRating" },
+            overallAverageRating: {
+              $avg: {
+                $divide: [
+                  {
+                    $add: [
+                      "$technicalRating",
+                      "$communicationRating",
+                      "$confidenceRating",
+                    ],
+                  },
+                  3,
+                ],
+              },
+            },
+          },
+        },
+      ]),
+      Feedback.countDocuments(filter),
+      Feedback.find(filter)
         .populate("studentId", "name email")
         .populate({
           path: "mentorId",
@@ -518,37 +625,30 @@ const getAdminFeedback = async (req, res) => {
           },
         })
         .populate("bookingId", "_id")
-        .sort({ createdAt: -1 }),
-      Feedback.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalFeedback: { $sum: 1 },
-            averageTechnicalRating: { $avg: "$technicalRating" },
-            averageCommunicationRating: { $avg: "$communicationRating" },
-            averageConfidenceRating: { $avg: "$confidenceRating" },
-          },
-        },
-      ]),
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
     ]);
 
-    const summary = statistics[0] || {
+    const summary = summaryData[0] || {
       totalFeedback: 0,
-      averageTechnicalRating: 0,
-      averageCommunicationRating: 0,
-      averageConfidenceRating: 0,
+      averageTechnicalRating: null,
+      averageCommunicationRating: null,
+      averageConfidenceRating: null,
+      overallAverageRating: null,
     };
 
     res.status(200).json({
       success: true,
       message: "Admin feedback fetched successfully",
-      count: feedback.length,
-      feedback,
-      statistics: {
+      data: feedback,
+      pagination: getPaginationMeta(page, limit, totalItems),
+      summary: {
         totalFeedback: summary.totalFeedback,
-        averageTechnicalRating: summary.averageTechnicalRating || 0,
-        averageCommunicationRating: summary.averageCommunicationRating || 0,
-        averageConfidenceRating: summary.averageConfidenceRating || 0,
+        averageTechnicalRating: summary.averageTechnicalRating ?? null,
+        averageCommunicationRating: summary.averageCommunicationRating ?? null,
+        averageConfidenceRating: summary.averageConfidenceRating ?? null,
+        overallAverageRating: summary.overallAverageRating ?? null,
       },
     });
   } catch (error) {

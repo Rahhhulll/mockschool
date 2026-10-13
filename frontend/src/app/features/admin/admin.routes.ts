@@ -22,6 +22,11 @@ export const ADMIN_ROUTES: Routes = [
       import('./pages/bookings/bookings.component').then(({ BookingsComponent }) => BookingsComponent),
   },
   {
+    path: 'feedback',
+    loadComponent: () =>
+      import('./pages/feedback/feedback.component').then(({ FeedbackComponent }) => FeedbackComponent),
+  },
+  {
     path: '',
     redirectTo: 'dashboard',
     pathMatch: 'full',

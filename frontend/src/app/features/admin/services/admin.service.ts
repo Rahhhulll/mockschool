@@ -1,9 +1,12 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { AdminBooking, AdminBookingListResponse, AdminDashboardData, AdminDashboardResponse, AdminListResponse, AdminMentor, AdminMentorDetailResponse, AdminUser, AdminUserDetailResponse } from '../models/admin-dashboard.model';
+import { AdminBooking, AdminBookingListResponse, AdminDashboardData, AdminDashboardResponse, AdminFeedback, AdminFeedbackResponse, AdminListResponse, AdminMentor, AdminMentorDetailResponse, AdminUser, AdminUserDetailResponse } from '../models/admin-dashboard.model';
+import { SKIP_GLOBAL_HTTP_ERROR_NOTIFICATION } from '../../../core/interceptors/http-error-context';
+
+const localErrorContext = () => new HttpContext().set(SKIP_GLOBAL_HTTP_ERROR_NOTIFICATION, true);
 
 const emptyDashboard: AdminDashboardData = {
   stats: {
@@ -42,7 +45,7 @@ export class AdminService {
   }
 
   deleteUser(id: string): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(`${environment.apiUrl}/admin/users/${id}`);
+    return this.http.delete<{ success: boolean; message: string }>(`${environment.apiUrl}/admin/users/${id}`, { context: localErrorContext() });
   }
 
   getMentors(params?: { page?: number; limit?: number; search?: string; verificationStatus?: string }): Observable<AdminListResponse<AdminMentor>> {
@@ -51,11 +54,16 @@ export class AdminService {
   }
 
   verifyMentor(id: string, isVerified: boolean): Observable<AdminMentorDetailResponse> {
-    return this.http.patch<AdminMentorDetailResponse>(`${environment.apiUrl}/admin/mentors/${id}/verify`, { isVerified });
+    return this.http.patch<AdminMentorDetailResponse>(`${environment.apiUrl}/admin/mentors/${id}/verify`, { isVerified }, { context: localErrorContext() });
   }
 
   getBookings(params?: { page?: number; limit?: number; search?: string; status?: string; paymentStatus?: string }): Observable<AdminBookingListResponse> {
     const queryParams = new HttpParams({ fromObject: { ...params, page: params?.page ?? 1, limit: params?.limit ?? 10 } });
     return this.http.get<AdminBookingListResponse>(`${environment.apiUrl}/admin/bookings`, { params: queryParams });
+  }
+
+  getFeedback(params?: { page?: number; limit?: number; search?: string; rating?: string | number }): Observable<AdminFeedbackResponse> {
+    const queryParams = new HttpParams({ fromObject: { ...params, page: params?.page ?? 1, limit: params?.limit ?? 10 } });
+    return this.http.get<AdminFeedbackResponse>(`${environment.apiUrl}/admin/feedback`, { params: queryParams });
   }
 }

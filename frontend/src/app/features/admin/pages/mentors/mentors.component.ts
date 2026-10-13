@@ -17,6 +17,7 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { SkeletonLoaderComponent } from '../../../../shared/components/skeleton-loader/skeleton-loader.component';
 import { NotificationService } from '../../../../shared/services/notification.service';
 import { AdminService } from '../../services/admin.service';
 import { AdminMentor } from '../../models/admin-dashboard.model';
@@ -42,6 +43,7 @@ type MentorVerificationFilter = 'all' | 'verified' | 'pending';
     ErrorStateComponent,
     LoadingSpinnerComponent,
     PageHeaderComponent,
+    SkeletonLoaderComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './mentors.component.html',
@@ -61,7 +63,7 @@ export class MentorsComponent {
   readonly searchTerm = signal('');
   readonly filter = signal<MentorVerificationFilter>('all');
   readonly selectedMentor = signal<AdminMentor | null>(null);
-  readonly updatingId = signal<string | null>(null);
+  readonly updatingIds = signal<ReadonlySet<string>>(new Set());
   readonly detailsLoading = signal(false);
 
   readonly displayedColumns = ['mentor', 'email', 'expertise', 'experience', 'hourlyRate', 'rating', 'status', 'actions'];
@@ -137,25 +139,40 @@ export class MentorsComponent {
   }
 
   verifyMentor(mentor: AdminMentor, nextState: boolean): void {
+    if (this.updatingIds().has(mentor._id)) return;
+
     const mentorId = mentor._id;
+    const mentorName = this.mentorName(mentor);
     const actionLabel = nextState ? 'Verify Mentor' : 'Unverify Mentor';
 
     const data: ConfirmationDialogData = {
       title: actionLabel,
       message: nextState
-        ? 'This mentor will be marked as verified and may become eligible for the public verified listing.'
-        : 'This mentor will be marked as pending and may be removed from the public verified listing.',
+        ? `Verify ${mentorName}? They will be marked as verified and may become eligible for the public verified listing.`
+        : `Unverify ${mentorName}? They will be marked as pending and may be removed from the public verified listing.`,
       confirmLabel: actionLabel,
       cancelLabel: 'Cancel',
+      warning: !nextState,
     };
 
-    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, { data }).afterClosed().subscribe((confirmed) => {
-      if (!confirmed) {
+    this.dialog.open<ConfirmationDialogComponent, ConfirmationDialogData, boolean>(ConfirmationDialogComponent, {
+      data,
+      role: 'alertdialog',
+      ariaLabelledBy: 'confirmation-dialog-title',
+      ariaDescribedBy: 'confirmation-dialog-message',
+    }).afterClosed().subscribe((confirmed) => {
+      if (!confirmed || this.updatingIds().has(mentorId)) {
         return;
       }
 
-      this.updatingId.set(mentorId);
-      this.adminService.verifyMentor(mentorId, nextState).pipe(finalize(() => this.updatingId.set(null))).subscribe({
+      this.updatingIds.update((ids) => new Set(ids).add(mentorId));
+      this.adminService.verifyMentor(mentorId, nextState).pipe(finalize(() => {
+        this.updatingIds.update((ids) => {
+          const next = new Set(ids);
+          next.delete(mentorId);
+          return next;
+        });
+      })).subscribe({
         next: (response) => {
           const updatedMentor = response.data ?? response.mentor ?? mentor;
           this.mentors.update((items) => items.map((item) => item._id === updatedMentor._id ? { ...item, ...updatedMentor, isVerified: nextState } : item));
@@ -163,8 +180,7 @@ export class MentorsComponent {
           this.notification.success(nextState ? 'Mentor verified successfully.' : 'Mentor unverified successfully.');
         },
         error: (error) => {
-          const message = error?.error?.message ?? 'Unable to update mentor verification.';
-          this.notification.error(message);
+          if (error?.status !== 401) this.notification.error('Unable to update mentor verification. Please try again.');
         },
       });
     });

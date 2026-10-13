@@ -7,15 +7,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   imports: [MatProgressSpinnerModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="spinner" [class.overlay]="fullPage" role="status" aria-live="polite">
-      <mat-progress-spinner [diameter]="diameter" mode="indeterminate"></mat-progress-spinner>
+    <div class="spinner" [class.overlay]="fullPage" role="status" aria-live="polite" [attr.aria-label]="message || 'Loading'">
+      <mat-progress-spinner [diameter]="diameter" mode="indeterminate" aria-hidden="true"></mat-progress-spinner>
       @if (message) { <span>{{ message }}</span> }
     </div>
   `,
-  styles: [`
-    .spinner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-md); padding: var(--space-3xl); color: var(--color-text-secondary); }
-    .overlay { position: fixed; inset: 0; z-index: 1000; background: rgb(255 255 255 / 0.82); }
-  `],
+    styles: [`
+      .spinner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-md); padding: var(--space-3xl); color: var(--color-text-secondary); }
+      .overlay { position: fixed; inset: 0; z-index: 1000; background: rgb(255 255 255 / 0.82); }
+    `],
 })
 export class LoadingSpinnerComponent {
   @Input() size: 'small' | 'medium' | 'large' = 'medium';

@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -9,11 +10,14 @@ import { finalize } from 'rxjs';
 
 import { Mentor } from '../../core/models/mentor.model';
 import { MentorService } from '../../core/services/mentor.service';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { SkeletonLoaderComponent } from '../../shared/components/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-mentors',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, RouterLink],
+  imports: [CommonModule, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, RouterLink, EmptyStateComponent, ErrorStateComponent, SkeletonLoaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="mentors app-shell">
@@ -26,10 +30,9 @@ import { MentorService } from '../../core/services/mentor.service';
       </header>
 
       @if (loading()) {
-        <div class="loading-state">
-          <mat-icon>hourglass_empty</mat-icon>
-          <p>Loading mentors...</p>
-        </div>
+        <app-skeleton-loader variant="card" [count]="6" />
+      } @else if (errorMessage()) {
+        <app-error-state title="Unable to load mentors" [message]="errorMessage() ?? 'Please try again.'" retryLabel="Retry" (retry)="loadMentors()" />
       } @else if (mentors().length) {
         <section class="mentor-grid">
           @for (mentor of mentors(); track mentor._id) {
@@ -61,11 +64,7 @@ import { MentorService } from '../../core/services/mentor.service';
           }
         </section>
       } @else {
-        <div class="empty-state">
-          <mat-icon>groups</mat-icon>
-          <h2>No mentors available yet.</h2>
-          <p>Check back later for verified mentors.</p>
-        </div>
+        <app-empty-state icon="groups" title="No mentors available yet." description="Check back later for verified mentors." />
       }
     </main>
   `,
@@ -87,8 +86,6 @@ import { MentorService } from '../../core/services/mentor.service';
     .details { display: flex; flex-direction: column; gap: var(--space-sm); margin-bottom: var(--space-lg); color: var(--color-text-secondary); }
     .details span { display: inline-flex; align-items: center; gap: var(--space-xs); }
     .details mat-icon { width: 18px; height: 18px; font-size: 18px; }
-    .loading-state, .empty-state { display: grid; place-items: center; gap: var(--space-md); min-height: 300px; text-align: center; }
-    .loading-state mat-icon, .empty-state mat-icon { width: 56px; height: 56px; font-size: 56px; color: var(--color-primary); }
     @media (max-width: 599px) { .page-header { flex-direction: column; align-items: flex-start; } }
   `],
 })
@@ -96,11 +93,23 @@ export class MentorsComponent {
   private readonly mentorService = inject(MentorService);
   readonly mentors = signal<Mentor[]>([]);
   readonly loading = signal(true);
+  readonly errorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
+    this.loadMentors();
+  }
+
+  loadMentors(): void {
+    this.loading.set(true);
+    this.errorMessage.set(null);
     this.mentorService.getVerifiedMentors().pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (response) => this.mentors.set(response.mentors),
-      error: () => this.mentors.set([]),
+      error: (error: HttpErrorResponse) => {
+        this.mentors.set([]);
+        this.errorMessage.set(error.status === 0
+          ? 'Check your connection and try again.'
+          : 'Unable to load mentors. Please try again.');
+      },
     });
   }
 
